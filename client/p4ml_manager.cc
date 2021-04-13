@@ -656,7 +656,7 @@ void P4mlManager::init_threadPool(int num_thread)
 
 void P4mlManager::PushPullLoop(int thread_id)
 {
-    bindingCPU(thread_id + 1);
+    //bindingCPU(thread_id + 1);
     ThreadInfo* thread_info = threadInfoQueue[thread_id];
     DMAcontext* dma_context = dmaContextQueue[thread_id];
     int agtr_size = max_agtr_size_per_thread;

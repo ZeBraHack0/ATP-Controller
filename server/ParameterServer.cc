@@ -412,7 +412,7 @@ void main_receive_packet_loop(DMAcontext* dma_context, int thread_id) {
 
 
 void Start(int thread_id) {
-    bindingCPU(thread_id + 16);
+    //bindingCPU(thread_id + 16);
     DMAcontext* dma_context;
     {
         std::lock_guard<std::mutex> lock(_dma_mutex);
