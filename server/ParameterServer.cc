@@ -430,7 +430,7 @@ void Start(int thread_id) {
 }
 
 int main(int argc, char *argv[]) {
-    bindingCPU(15);
+    //bindingCPU(15);
     srand(time(NULL));
     // num_thread = atoi(argv[1]);
 
