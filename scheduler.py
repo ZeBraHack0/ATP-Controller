@@ -682,6 +682,8 @@ class Scheduler:
                 self.place(self.q1[i])
                 self.q1.pop(i)
                 i -= 1
+            else:
+                break
             i += 1
 
         i = 0
@@ -692,11 +694,13 @@ class Scheduler:
                 self.place(self.q2[i])
                 self.q2.pop(i)
                 i -= 1
+            else:
+                break
             i += 1
 
     def receive_job(self, j):
         self.idx += 1
-        cfq[self.idx] = -1*j.cost-1
+        cfq[self.idx] = -1
         j.id = self.idx  # store the idx temporarily
         self.q2.append(j)
         self.schedule()
@@ -732,7 +736,7 @@ class myTCP(StreamRequestHandler):
             if mutex_sch.acquire():
                 job = Job(cost=int(s[1]), model=s[3], dataset=s[2], num_iters=int(s[4]))
                 if job.cost > sch.rc_sum:
-                    self.wfile.write("overload!".encode('utf-8'))
+                    self.wfile.write("resource overload!".encode('utf-8'))
                     return
                 idx = sch.receive_job(job)
                 mutex_sch.release()
