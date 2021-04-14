@@ -1,5 +1,5 @@
 #!/bin/bash
 cd client/
-make
+make clean && make
 cd ../server/
-make
+make clean && make

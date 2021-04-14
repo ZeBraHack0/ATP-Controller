@@ -5,34 +5,54 @@ import socket
 import threading
 
 
-time_slice = 60
+time_slice = 5
 threshold = 60
 starving = 3600
 port = 8888
-ban_list = [0, 1, 5, 6, 7, 8]
+ban_list = []
 cfq = {}
 mutex_sch = threading.Lock()
 mutex_cfq = threading.Lock()
 
+port_of_worker = [56, 48, 40, 32, 24, 16, 8, 0, 4]
+loop_back = [12, 28, 20, 44, 36, 60, 52]
+MAC_address_of_worker = [ "b8:59:9f:1d:04:f2"
+                        , "b8:59:9f:0b:30:72"
+                        , "98:03:9b:03:46:50"
+                        , "b8:59:9f:02:0d:14"
+                        , "b8:59:9f:b0:2d:50"
+                        , "b8:59:9f:b0:2b:b0"
+                        , "b8:59:9f:b0:2b:b8"
+                        , "b8:59:9f:b0:2d:18"
+                        , "b8:59:9f:b0:2d:58" ]
+ip_of_worker = [ "10.0.0.1"
+                , "10.0.0.2"
+                , "10.0.0.3"
+                , "10.0.0.4"
+                , "10.0.0.5"
+                , "10.0.0.6"
+                , "10.0.0.7"
+                , "10.0.0.8"
+                , "10.0.0.9" ]
 
 
 def topo(file="controller/topology", initial=False):
     f = open(file)
     s = f.readlines()
     host_num = int(s[0].strip('\n'))
-    port_of_worker = []
-    ip_of_worker = []
-    MAC_address_of_worker = []
-    for i in range(host_num):
-        port_of_worker.append([int(x.strip('\n')) for x in s[i+1].split('\t')])
-    for i in range(host_num):
-        ip_of_worker.append([x.strip('\n') for x in s[i+1+host_num].split('\t')])
-    for i in range(host_num):
-        MAC_address_of_worker.append([x.strip('\n') for x in s[i+1+2*host_num].split('\t')])
-    single_loopback_port = int(s[host_num*3+1].strip('\n'))
+    # port_of_worker = []
+    # ip_of_worker = []
+    # MAC_address_of_worker = []
+    # for i in range(host_num):
+    #     port_of_worker.append([int(x.strip('\n')) for x in s[i+1].split('\t')])
+    # for i in range(host_num):
+    #     ip_of_worker.append([x.strip('\n') for x in s[i+1+host_num].split('\t')])
+    # for i in range(host_num):
+    #     MAC_address_of_worker.append([x.strip('\n') for x in s[i+1+2*host_num].split('\t')])
+    # single_loopback_port = loop_back
 
-    if not initial:
-        return port_of_worker, ip_of_worker, MAC_address_of_worker, single_loopback_port
+    # if not initial:
+    #     return port_of_worker, ip_of_worker, MAC_address_of_worker, single_loopback_port
 
     # initial switch
     clear_all()
@@ -75,13 +95,21 @@ def topo(file="controller/topology", initial=False):
     # basic routine
     len_workers = len(port_of_worker)
     for i in range(0, len_workers):
-        for j in range(0, len(port_of_worker[i])):
-            p4_pd.forward_table_add_with_set_egr(
-                p4_pd.forward_match_spec_t(macAddr_to_string(MAC_address_of_worker[i][j])),
-                p4_pd.set_egr_action_spec_t(port_of_worker[i][j])
-            )
-
+        p4_pd.forward_table_add_with_set_egr(
+            p4_pd.forward_match_spec_t(macAddr_to_string(MAC_address_of_worker[i])),
+            p4_pd.set_egr_action_spec_t(port_of_worker[i])
+        )
     print("basic routine done")
+
+    # config drop table
+    for w in port_of_worker:
+        p4_pd.drop_table_table_add_with_drop_pkt(
+            p4_pd.drop_table_match_spec_t(
+            w,
+            0)
+        )
+
+    print("drop_table done")
 
     p4_pd.modify_packet_bitmap_table_table_add_with_modify_packet_bitmap(
         p4_pd.modify_packet_bitmap_table_match_spec_t(1)
@@ -278,58 +306,38 @@ def topo(file="controller/topology", initial=False):
         p4_pd.processEntry31_match_spec_t(hex_to_i32(0), hex_to_i32(0x00000000)), 1
     )
     print("finish topo building")
-    return port_of_worker, ip_of_worker, MAC_address_of_worker, single_loopback_port
 
 
 def config(job_id, workers, ps, single_loopback_port):
-
     # Here we assume that one job has only one Ps
     # config outPort table
     for w in workers:
         p4_pd.outPort_table_table_add_with_set_egr_and_set_index(
             p4_pd.outPort_table_match_spec_t(
-                1 << 16,
+                job_id << 16,
                 w,  # port of worker
                 0,  # if the packet is recirculate (0: no / 1: yes)
-                1),  # ps index, always 1
+                0),  # ps index, always 1
             p4_pd.set_egr_and_set_index_action_spec_t(single_loopback_port))
 
     print("outPort table 1 done")
 
     p4_pd.outPort_table_table_add_with_set_egr(
         p4_pd.outPort_table_match_spec_t(
-            1 << 16,
+            job_id << 16,
             single_loopback_port,
             1,
-            1),
+            0),
         p4_pd.set_egr_action_spec_t(ps))
 
     print("outPort table 2 done")
 
-    # config drop table
-    for w in workers:
-        p4_pd.drop_table_table_add_with_drop_pkt(
-            p4_pd.drop_table_match_spec_t(
-                w,
-                0)
-        )
-
-    print("drop_table done")
-
     # config multicast for Ps
-    mcg_all = mc.mgrp_create(1000-job_id)
-    node_all = mc.node_create(
-        rid=1000-job_id,
-        port_map=devports_to_mcbitmap(workers),
-        lag_map=lags_to_mcbitmap(([]))
-    )
-    mc.associate_node(mcg_all, node_all, xid=0, xid_valid=False)
-    conn_mgr.complete_operations()
 
     p4_pd.multicast_table_table_add_with_multicast(
         p4_pd.multicast_table_match_spec_t(
             1,
-            1 << 16,
+            job_id << 16,
             ps,
             0),
         # multicast app1 -> worker1, 2
@@ -338,13 +346,54 @@ def config(job_id, workers, ps, single_loopback_port):
     print("finish configuration")
 
 
+def deconfig(job_id, workers, ps, single_loopback_port):
+
+    # Here we assume that one job has only one Ps
+    # config outPort table
+    for w in workers:
+        p4_pd.outPort_table_table_delete_by_match_spec(
+            p4_pd.outPort_table_match_spec_t(
+                job_id << 16,
+                w,
+                0,
+                0))
+
+    print("outPort table 1 deleted")
+
+
+    p4_pd.outPort_table_table_delete_by_match_spec(
+        p4_pd.outPort_table_match_spec_t(
+            job_id << 16,
+            single_loopback_port,
+            1,
+            0))
+
+    print("outPort table 2 deleted")
+
+
+    # config multicast for Ps
+
+    p4_pd.multicast_table_table_delete_by_match_spec(
+        p4_pd.multicast_table_match_spec_t(
+            1,
+            job_id << 16,
+            ps,
+            0)
+    )
+    print("finish deletion")
+
 
 class Job:
-    def __init__(self, s1="", s2="", s3=""):
-        self.cost = 0  # worker + ps
+    def __init__(self, s1="", s2="", s3="", cost=1, dataset="", model="", num_iters=10):
+        self.cost = cost  # gpu num
         self.dis = []
-        self.id = 0  # not used yet
+        self.gpus = []  # gpu dis
+        self.id = 0
+        self.dataset = dataset
+        self.model = model
+        self.num_iters = num_iters
         self.waiting_time = 0
+        self.ps = [0, 0]
         if s1 != "":
             self.id = int(s1.strip('\n'))
             self.waiting_time = int(s2.strip('\n'))
@@ -358,36 +407,79 @@ class Job:
         self.cost = len(self.dis)
 
 
-def send_executor(t, ip, idx, workerID=0, workerSum=0, appID=0):
-    if t == "worker":
-        message = "execute_worker_" + str(workerID) + "_" + str(workerSum) + "_" + str(appID)
+def send_executor(role, des, idx, workerID, workerSum, tar_job):
+    appID = tar_job.id
+    gpu_num = 0
+    if role == "worker":
+        message = "execute_worker_" + str(workerID) + "_" + str(workerSum) + "_" + str(appID) + "_"
+        for gpu in tar_job.dis[workerID][2:]:
+            message += str(gpu)
+            message += ","
+            gpu_num += 1
+        message = message.strip(",")
+        message += "_" + tar_job.dataset + "_" + tar_job.model + "_" + str(tar_job.num_iters)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((ip, port))
+        print((des, port))
+        # handshaking
+        flag = 0
+        while cfq[idx] < 0:
+            time.sleep(1)
+            try:
+                if flag == 0:
+                    client.connect((des, port))
+                    print("worker " + str(workerID) + " connected")
+                    if mutex_cfq.acquire():
+                        cfq[idx] += gpu_num
+                        mutex_cfq.release()
+                    flag = 1
+            except Exception as e:
+                print(e)
+
         print("send worker request")
         client.send(message.encode('utf-8'))
         data = client.recv(1024)
         if data.decode('utf-8') == "finished!":
             if mutex_cfq.acquire():
-                cfq[idx] += 1
+                cfq[idx] += gpu_num
                 mutex_cfq.release()
             return
-    elif t == "ps":
+
+    elif role == "ps":
         message = "execute_ps"
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((ip, port))
+
+        # handshaking
+        flag = 0
+        while cfq[idx] < 0:
+            time.sleep(1)
+            try:
+                if flag == 0:
+                    client.connect((des, port))
+                    print("server connected")
+                    if mutex_cfq.acquire():
+                        cfq[idx] += 1
+                        mutex_cfq.release()
+                    flag = 1
+            except Exception as e:
+                print(e)
+
         print("send ps request")
         client.send(message.encode('utf-8'))
+        client.close()
         while True:
             time.sleep(5)
-            if cfq[idx] == workerSum:
-                cfq[idx] += 1
+            if cfq[idx] == tar_job.cost:
+                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client.connect((des, 10000+appID))
                 message = "execute_finished"
-                print("execute_finished")
                 client.send(message.encode('utf-8'))
-                data = client.recv(1024)
-                if data.decode('utf-8') == "finished!":
-                    return
-
+                client.close()
+                cfq[idx] += 1
+                print("execute_finished")
+                # client.send(message.encode('utf-8'))
+                # data = client.recv(1024)
+                # if data.decode('utf-8') == "finished!":
+                return
 
 
 class Scheduler:
@@ -396,122 +488,185 @@ class Scheduler:
         self.jobs = []
         self.job_id = [0 for i in range(0, 999)]
         self.rc = 0
+        self.rc_sum = 0
         self.q1 = []
         self.q2 = []
         self.dis = []
+        self.gpus = []
+        self.mc_node = {}
         self.worker_num = 0
         self.idx = 0
-        self.port_of_worker, self.ip_of_worker, self.MAC_address_of_worker, self.single_loopback_port = topo(initial=True)
-        self.worker_num = len(self.port_of_worker)
+        self.port_of_worker, self.ip_of_worker, self.MAC_address_of_worker, self.single_loopback_port = port_of_worker, ip_of_worker, MAC_address_of_worker, loop_back
         self.workload = [0 for i in range(len(self.port_of_worker))]
         self.psload = [0 for i in range(len(self.port_of_worker))]
         for w in self.port_of_worker:
-            self.dis.append([0 for i in range(len(w))])
-            self.rc += len(w)
-        for i in ban_list:
-            self.workload[i] = len(self.dis[i])
+            self.dis.append([])  # usage bitmap
+            self.gpus.append(0)  # total
+            # self.rc += len(w)
+        # handshaking
+        for i in range(len(self.port_of_worker)):
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                client.connect((self.ip_of_worker[i], port))
+                client.send("gpu".encode('utf-8'))
+                data = client.recv(1024).decode('utf-8')
+                self.rc += int(data)
+                self.dis[i].extend([0 for x in range(int(data))])
+                self.gpus[i] = int(data)
+                client.close()
+                print("worker " + str(i) + " with " + data + "GPUs connected!")
+            except Exception as e:
+                # print(e)
+                # ban_list.append(i)
+                print("worker " + str(i)+" disconnected!")
+        self.rc_sum = self.rc
+
         print("scheduler init success!")
 
-    def read_status(self, file_status="controller/status"):
-        # read status info
-        f1 = open(file_status)
-        s = f1.readlines()
-        self.job_num = int(s[0].strip('\n'))
-        self.worker_num = int(s[1].strip('\n'))
-        if self.job_num == 0:
-            return
-        i = 0
-        while i < len(s):
-            self.jobs.append(Job(s[i], s[i + 1], s[i+2]))
-            self.job_id[self.jobs[-1].id] = 1
-            i += 3
-        self.workload = [0 for i in range(0, self.worker_num)]
-        self.psload = [0 for i in range(0, self.worker_num)]
-        for j in self.jobs:
-            for w in j.dis:
-                self.dis[w[0]][w[1]] = 1
-                self.workload[w[0]] += 1
-            self.psload[j.dis[-1][0]] += 1
-            self.rc -= j.cost
+    # def read_status(self, file_status="controller/status"):
+    #     # read status info
+    #     f1 = open(file_status)
+    #     s = f1.readlines()
+    #     self.job_num = int(s[0].strip('\n'))
+    #     self.worker_num = int(s[1].strip('\n'))
+    #     if self.job_num == 0:
+    #         return
+    #     i = 0
+    #     while i < len(s):
+    #         self.jobs.append(Job(s[i], s[i + 1], s[i+2]))
+    #         self.job_id[self.jobs[-1].id] = 1
+    #         i += 3
+    #     self.workload = [0 for i in range(0, self.worker_num)]
+    #     self.psload = [0 for i in range(0, self.worker_num)]
+    #     for j in self.jobs:
+    #         for w in j.dis:
+    #             self.dis[w[0]][w[1]] = 1
+    #             self.workload[w[0]] += 1
+    #         self.psload[j.dis[-1][0]] += 1
+    #         self.rc -= j.cost
 
     def update(self):
-        for j in self.jobs:
-            j.waiting_time += time_slice
 
         i = 0
         while i < len(self.q2):
+            self.q2[i].waiting_time += time_slice
             if self.q2[i].waiting_time / self.q2[i].cost >= threshold or self.q2[i].waiting_time > starving:
                 self.q1.append(self.q2[i])
                 self.q2.pop(i)
                 i -= 1
             i += 1
 
-    def place(self, j):
-        # judge new job IDs
+    def place(self, job):
+        # decide new job IDs
         avail = -1  # 1000 - appID
         for i in range(1, 999):
-            if self.job_id[i] == 0:
-                self.job_id[i] = 1
+            if self.job_id[i] != 1:
                 avail = i
                 break
         if avail == -1:
             print("multicast number error")
             quit()
-        idx = j.id
-        j.id = avail
+        idx = job.id
+        job.id = avail
 
+        # decide GPU distribution
         assigned = 0
         pq = PQ()
-        for i in range(0, self.worker_num):
-            if self.workload[i] < len(self.dis[i]):
-                pq.put([self.workload[i], self.psload[i], i])
-        while assigned < j.cost:
+        for i in range(len(self.port_of_worker)):
+            for j in range(len(self.port_of_worker[i])):
+                if self.workload[i][j] < self.gpus[i][j] and self.gpus[i][j] > 0:
+                    pq.put([self.workload[i][j], i, j])
+                    # print([self.port_of_worker[i][j], self.workload[i][j], self.gpus[i][j], i, j])
+
+        while assigned < job.cost:
             w = pq.get()
-            for i in range(len(self.dis[w[2]])):
-                if self.dis[w[2]][i] == 0:
-                    self.dis[w[2]][i] = 1
-                    j.dis.append([w[2], i])
-                    self.workload[w[2]] += 1
-                    w[0] += 1
+            gpu = []
+            # print(w)
+            # print(self.dis[w[1]][w[2]])
+            for i in range(len(self.dis[w[1]][w[2]])):
+                if self.dis[w[1]][w[2]][i] == 0:
+                    self.dis[w[1]][w[2]][i] = 1
+                    gpu.append(i)
+                    self.workload[w[1]][w[2]] += 1
+                    # w[0] += 1
                     assigned += 1
-                    break
-            pq.put(w)
-        if assigned != j.cost:
+                    if assigned == job.cost:
+                        break
+            job.dis.append([w[1], w[2]]+gpu)
+            # print(job.dis)
+            # pq.put(w)
+        if assigned != job.cost:
             print("assignment error!")
             quit()
-        self.rc -= j.cost
-        self.psload[j.dis[-1][0]] += 1
-        self.jobs.append(j)
+        self.rc -= job.cost
+
+        # decide ps
+        if len(job.dis) > 1:  # need a ps
+            ps = [10000, -1, -1]
+            for i in range(len(self.port_of_worker)):
+                for j in range(len(self.port_of_worker[i])):
+                    if ps[0] > self.workload[i][j] + self.psload[i][j] and self.gpus[i][j] > 0:
+                        ps = [self.workload[i][j] + self.psload[i][j], i, j]
+            if ps[1] == -1:
+                print("assignment error!")
+                quit()
+            job.ps = ps[1:]
+            self.psload[ps[1]][ps[2]] += 1
+
+            self.jobs.append(job)
+            self.job_num += 1
 
         # install rules
-        worker = [self.port_of_worker[x[0]][x[1]] for x in j.dis]
-        worker.pop()
-        config(j.id, worker, self.port_of_worker[j.dis[-1][0]][j.dis[-1][1]], self.single_loopback_port)
+        worker = [self.port_of_worker[x[0]][x[1]] for x in job.dis]
+        if len(job.dis) > 1:  # need a ps
+            config(job.id, worker, self.port_of_worker[ps[1]][ps[2]], self.single_loopback_port)
+            if self.job_id[avail] == 0:
+                mcg_all = mc.mgrp_create(1000 - avail)
+                node_all = mc.node_create(
+                    rid=1000 - avail,
+                    port_map=devports_to_mcbitmap(worker),
+                    lag_map=lags_to_mcbitmap(([]))
+                )
+                mc.associate_node(mcg_all, node_all, xid=0, xid_valid=False)
+                conn_mgr.complete_operations()
+                self.mc_node[avail] = [node_all, mcg_all]
+            else:
+                mc.node_update(
+                    self.mc_node[avail][0],
+                    port_map=devports_to_mcbitmap(worker),
+                    lag_map=lags_to_mcbitmap(([]))
+                )
+
+        self.job_id[avail] = 1
 
         # send message
         worker_sum = len(worker)
         threads = []
-        pt = threading.Thread(target=send_executor, args=("ps", self.ip_of_worker[j.dis[-1][0]][j.dis[-1][1]], idx))
-        pt.setDaemon(True)
-        threads.append(pt)
+        if len(job.dis) > 1:  # need a ps
+            pt = threading.Thread(target=send_executor, args=("ps", self.ip_of_worker[ps[1]][ps[2]], idx, 0, worker_sum, job))
+            pt.setDaemon(True)
+            threads.append(pt)
         for i in range(worker_sum):
-            t = threading.Thread(target=send_executor, args=("worker", self.ip_of_worker[j.dis[i][0]][j.dis[i][1]], idx, i, worker_sum, avail))
-            t.setDaemon(True)
-            threads.append(t)
-        for t in threads:
-            t.start()
+            th = threading.Thread(target=send_executor, args=("worker", self.ip_of_worker[job.dis[i][0]][job.dis[i][1]], idx, i, worker_sum, job))
+            th.setDaemon(True)
+            threads.append(th)
+        for th in threads:
+            th.start()
 
         # generate config_file
-        conf = open("controller/config_"+str(j.id)+"_"+str(time.time()), "w")
-        conf.write(str(j.id) + '\n')
+        conf = open("controller/config_"+str(job.id)+"_"+str(time.time()), "w")
+        conf.write(str(job.id) + '\n')
         worker_place = ""
-        for p in [self.port_of_worker[x[0]][x[1]] for x in j.dis]:
+        for x in job.dis:
             if worker_place != "":
                 worker_place += '\t'
-            worker_place += str(p)
+            worker_place += str(self.port_of_worker[x[0]][x[1]])
+            for i in range(2, len(x)):
+                worker_place += " " + str(x[i])
         worker_place += '\n'
         conf.write(worker_place)
-        conf.write(str(self.port_of_worker[j.dis[-1][0]][j.dis[-1][1]]) + '\n')
+        if len(job.dis) > 1:  # need a ps
+            conf.write(str(self.port_of_worker[ps[1]][ps[2]]) + '\n')
         conf.close()
 
     def schedule(self):
@@ -523,7 +678,7 @@ class Scheduler:
         while i < len(self.q1):
             if self.rc <= 0:
                 break
-            if self.q1[i].cost < self.rc:
+            if self.q1[i].cost <= self.rc:
                 self.place(self.q1[i])
                 self.q1.pop(i)
                 i -= 1
@@ -533,7 +688,7 @@ class Scheduler:
         while i < len(self.q2):
             if self.rc <= 0:
                 break
-            if self.q2[i].cost < self.rc:
+            if self.q2[i].cost <= self.rc:
                 self.place(self.q2[i])
                 self.q2.pop(i)
                 i -= 1
@@ -541,7 +696,7 @@ class Scheduler:
 
     def receive_job(self, j):
         self.idx += 1
-        cfq[self.idx] = 0
+        cfq[self.idx] = -1*j.cost-1
         j.id = self.idx  # store the idx temporarily
         self.q2.append(j)
         self.schedule()
@@ -575,21 +730,50 @@ class myTCP(StreamRequestHandler):
         idx = -1
         if s[0] == "control":
             if mutex_sch.acquire():
-                job = Job()
-                job.cost = int(s[1])
+                job = Job(cost=int(s[1]), model=s[3], dataset=s[2], num_iters=int(s[4]))
+                if job.cost > sch.rc_sum:
+                    self.wfile.write("overload!".encode('utf-8'))
+                    return
                 idx = sch.receive_job(job)
                 mutex_sch.release()
                 while True:
-                    time.sleep(10)
-                    print(cfq.get(idx, -1))
-                    print(job.cost)
-                    if cfq.get(idx, -1) == job.cost:  # check cfq
+                    time.sleep(5)
+                    print("finished gpus: " + str(cfq.get(idx, -1)))
+                    print("job cost: " + str(job.cost))
+                    if cfq.get(idx, -1) == job.cost + 1:  # check cfq
                         print("finished!")
                         self.wfile.write("finished!".encode('utf-8'))
+                        if mutex_sch.acquire():
+                            # release resources
+                            for w in job.dis:
+                                print(w)
+                                sch.workload[w[0]][w[1]] -= 1
+                                sch.dis[w[0]][w[1]][w[2]] = 0
+                            if len(job.dis) > 1:  # need a ps
+                                sch.psload[job.ps[0]][job.ps[1]] -= 1
+                            sch.rc += job.cost
+                            sch.job_id[job.id] = -1
+                            sch.job_num -= 1
+                            # delete rules
+                            if len(job.dis) > 1:  # need a ps
+                                worker = [sch.port_of_worker[x[0]][x[1]] for x in job.dis]
+                                deconfig(job.id, worker, sch.port_of_worker[job.ps[0]][job.ps[1]], sch.single_loopback_port)
+                            sch.jobs.remove(job)
+                            mutex_sch.release()
                         break
         else:
             print("error message!")
             return
+
+
+def run_schedulor():
+    while True:
+        time.sleep(5)
+        if mutex_sch.acquire():
+            sch.update()
+            sch.schedule()
+            print("rest resources:"+str(sch.rc))
+            mutex_sch.release()
 
 
 if __name__ == '__main__':
@@ -597,5 +781,8 @@ if __name__ == '__main__':
     print(ip)
     addr = (ip, port)
     print("server up")
+    t = threading.Thread(target=run_schedulor)
+    t.setDaemon(True)
+    t.start()
     server = ThreadingTCPServer(addr, myTCP)
     server.serve_forever()

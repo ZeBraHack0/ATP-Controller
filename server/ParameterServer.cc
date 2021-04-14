@@ -3,8 +3,9 @@
 tensor_context *tensors;
 
 int max_agtr_size_per_thread;
-int UsedSwitchAGTRcount = MAX_AGTR_COUNT;
+int UsedSwitchAGTRcount;
 std::mutex _dma_mutex;
+std::mutex _daemon_mutex;
 struct ibv_device **dev_list;
 struct ibv_device *ib_dev;
 ThreadPool* workQueue;
@@ -12,7 +13,6 @@ std::mutex __print_mutex;
 std::mutex _init_mutex;
 int num_thread;
 int print_count = 0;
-int appID;
 
 long long int receive_in_sec[20] = {0};
 bool receive_byte_reset_flag[20] = {0};
@@ -31,6 +31,8 @@ int packet_partial_total_count = 0;
 int full_packet_count[MAX_MEASUREMENT_KEY][16518] = { 0 };
 int resend_packet_count[MAX_MEASUREMENT_KEY][16518] = { 0 };
 
+int end_flag = 0;
+int daemon_flag = 0;
 
 DMAcontext** global_dma_contexts;
 
@@ -74,8 +76,9 @@ void main_receive_packet_loop(DMAcontext* dma_context, int thread_id) {
             if (msgs_completed) {    
                 break;
             }
-            if (time_span.count() > 20.0 && msgs_completed == 0 && dma_context->total_received > 0) {
+            if (time_span.count() > 20.0 && msgs_completed == 0 && dma_context->total_received > 0 || end_flag == 1) {
                 std::lock_guard<std::mutex> lock(_dma_mutex);
+              std::lock_guard<std::mutex> lock2(_daemon_mutex);
                 fprintf(stderr, "Timeout happened this thread_id=%d, total_received=%d, total_sent=%d, last_ACK=%d, total_last_tensor_packet_recv=%d\n",
                     thread_id, global_dma_contexts[thread_id]->total_received, global_dma_contexts[thread_id]->total_sent, tensors[tensors_pos_of_app[1]].window_manager[0].last_ACK, total_last_tensor_packet);
                 for (int i = 0; i < num_thread; i++)
@@ -101,7 +104,7 @@ void main_receive_packet_loop(DMAcontext* dma_context, int thread_id) {
                     if (hash_table->isAlreadyDeclare[i])
                         seen_agtrs++;
                 printf("Seen agtrs: %d\n", seen_agtrs);
-
+                daemon_flag += 1;
                 exit(-1);
             }
         }
@@ -412,12 +415,11 @@ void main_receive_packet_loop(DMAcontext* dma_context, int thread_id) {
 
 
 void Start(int thread_id) {
-    //bindingCPU(thread_id + 16);
+    bindingCPU(thread_id + 16);
     DMAcontext* dma_context;
     {
         std::lock_guard<std::mutex> lock(_dma_mutex);
-
-        dma_context = DMA_create(ib_dev, thread_id + ((appID - 1) * MAX_THREAD_PER_APP), true);
+        dma_context = DMA_create(ib_dev, thread_id, true);
         // dma_context->isSent = new bool[MAX_TENSOR_SIZE / MAX_ENTRIES_PER_PACKET + 1];
         // dma_context->send_time = new std::chrono::high_resolution_clock::time_point[MAX_TENSOR_SIZE / MAX_ENTRIES_PER_PACKET + 1];
         // dma_context->receive_time = new std::chrono::high_resolution_clock::time_point[MAX_TENSOR_SIZE / MAX_ENTRIES_PER_PACKET + 1];
@@ -429,17 +431,63 @@ void Start(int thread_id) {
     sleep(1000);
 }
 
+void end_server(int app_id) {
+  int listenfd, connfd;
+  struct sockaddr_in servaddr;
+  char buff[4096];
+  int n;
+
+  if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    printf("create socket error: %s(errno: %d)\n", strerror(errno), errno);
+    return;
+  }
+
+  memset(&servaddr, 0, sizeof(servaddr));
+  servaddr.sin_family = AF_INET;
+  servaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
+  servaddr.sin_port = htons(10000 + app_id);
+
+  if (bind(listenfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) == -1) {
+    printf("bind socket error: %s(errno: %d)\n", strerror(errno), errno);
+    return;
+  }
+
+  if (listen(listenfd, 10) == -1) {
+    printf("listen socket error: %s(errno: %d)\n", strerror(errno), errno);
+    return;
+  }
+
+  printf("======waiting for client's request======\n");
+  while (1) {
+    if (daemon_flag == num_thread) {
+      printf("end after timeout!\n");
+      return;
+    }
+    if ((connfd = accept(listenfd, (struct sockaddr*)NULL, NULL)) == -1) {
+      printf("accept socket error: %s(errno: %d)", strerror(errno), errno);
+      continue;
+    }
+    n = recv(connfd, buff, 4096, 0);
+    buff[n] = '\0';
+    printf("recv msg from client: %s\n", buff);
+    printf("shuydown the server!\n")
+    end_flag = 1;
+    close(connfd);
+  }
+  close(listenfd);
+  return;
+}
+
 int main(int argc, char *argv[]) {
-    //bindingCPU(15);
+    bindingCPU(15);
     srand(time(NULL));
     // num_thread = atoi(argv[1]);
-
-    appID = atoi(argv[1]);
-    // Lam: this one is for experiment, disable temporary
-    // if (argv[1])
-    //     UsedSwitchAGTRcount = atoi(argv[1]);
-    // else
-    //     UsedSwitchAGTRcount = MAX_AGTR_COUNT;
+    int app_id = 1;
+    if (argv[1]) app_id = atoi(argv[1]);
+    if (argv[2])
+      UsedSwitchAGTRcount = atoi(argv[2]);
+    else
+        UsedSwitchAGTRcount = MAX_AGTR_COUNT;
     num_thread = 12;
 
     dev_list = ibv_get_device_list(NULL);
@@ -455,6 +503,9 @@ int main(int argc, char *argv[]) {
     }
 
     /* Init Thread */
+    std::thread server_t(end_server, app_id);
+    server_t.detach();
+
     workQueue = new ThreadPool(num_thread, [](){});
     max_agtr_size_per_thread = 250;
     global_dma_contexts = new DMAcontext*[num_thread];
