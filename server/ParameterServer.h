@@ -23,7 +23,7 @@
 #include<thread> 
 #include "../byteps/common/packet.h"
 #include "../byteps/common/dma_common.h"
-#include "../byteps/common/threadpool.h"
+#include "../byteps/common/thread_pool.h"
 #include "../byteps/common/utils.h"
 #include "../byteps/common/window_manager.h"
 #include "../byteps/common/HashTable.h"
