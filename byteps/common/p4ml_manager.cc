@@ -661,7 +661,7 @@ void P4mlManager::PushPullLoop(int thread_id)
 {
     // If this is binding from "thread_id + 1", the performance decrease dramatically 
     // binding core to coresonding NUMA to achieve better performance & low loss rate
-    bindingCPU(thread_id + 16);
+   // bindingCPU(thread_id + 16);
     ThreadInfo* thread_info = threadInfoQueue[thread_id];
     DMAcontext* dma_context = dmaContextQueue[thread_id];
     int agtr_size = max_agtr_size_per_thread;

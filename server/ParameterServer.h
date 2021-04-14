@@ -21,17 +21,20 @@
 #include<netinet/in.h>
 #include<unistd.h>
 #include<thread> 
-#include "../byteps/common/packet.h"
-#include "../byteps/common/dma_common.h"
-#include "../byteps/common/ThreadPool.h"
-#include "../byteps/common/utils.h"
-#include "../byteps/common/window_manager.h"
-#include "../byteps/common/HashTable.h"
+#include "../common/packet.h"
+#include "../common/dma_common.h"
+#include "../common/ThreadPool.h"
+#include "../common/utils.h"
+#include "../common/window_manager.h"
+#include "../common/HashTable.h"
 
 #define MAX_TENSOR_SIZE 1024000
+// Lam: this one is useless since a PS can only handle 1app, to be mod.
 #define MAX_APP_PER_THREAD 5
 #define MAX_STORAGE_PER_APP_PER_THREAD 10
 #define MAX_WORKER 16
+
+#define MAX_THREAD_PER_APP 20
 
 #define OVERFLOW_HANDLE false
 
