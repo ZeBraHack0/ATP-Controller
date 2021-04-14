@@ -471,8 +471,8 @@ void end_server(int app_id) {
         n = recv(connfd, buff, 4096, 0);
         buff[n] = '\0';
         printf("recv msg from client: %s\n", buff);
-        printf("shuydown the server!\n")
-            end_flag = 1;
+        printf("shutdown the server!\n");
+        end_flag = 1;
         close(connfd);
     }
     close(listenfd);
@@ -505,7 +505,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Init Thread */
-    std::thread server_t(end_server, app_ID);
+    std::thread server_t(end_server, appID);
     server_t.detach();
     workQueue = new ThreadPool(num_thread, [](){});
     max_agtr_size_per_thread = 250;
