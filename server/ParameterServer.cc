@@ -505,7 +505,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Init Thread */
-    std::thread server_t(end_server, app_id);
+    std::thread server_t(end_server, app_ID);
     server_t.detach();
     workQueue = new ThreadPool(num_thread, [](){});
     max_agtr_size_per_thread = 250;
