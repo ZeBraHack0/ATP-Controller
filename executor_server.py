@@ -60,6 +60,7 @@ class myTCP(StreamRequestHandler):
 if __name__ == '__main__':
     hostname = socket.gethostname()
     ip = socket.gethostbyname(hostname)
+    ip = '10.0.0.' + ip[-1]
     print(ip)
     port = 8888
     addr = (ip, port)
