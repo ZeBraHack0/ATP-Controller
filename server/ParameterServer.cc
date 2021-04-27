@@ -77,7 +77,7 @@ void main_receive_packet_loop(DMAcontext* dma_context, int thread_id) {
             if (msgs_completed) {    
                 break;
             }
-            if (time_span.count() > 20.0 && msgs_completed == 0 && dma_context->total_received > 0) {
+            if (time_span.count() > 20.0 && msgs_completed == 0 && dma_context->total_received > 0 || end_flag == 1) {
                 std::lock_guard<std::mutex> lock(_dma_mutex);
                 fprintf(stderr, "Timeout happened this thread_id=%d, total_received=%d, total_sent=%d, last_ACK=%d, total_last_tensor_packet_recv=%d\n",
                     thread_id, global_dma_contexts[thread_id]->total_received, global_dma_contexts[thread_id]->total_sent, tensors[tensors_pos_of_app[1]].window_manager[0].last_ACK, total_last_tensor_packet);

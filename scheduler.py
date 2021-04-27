@@ -87,7 +87,7 @@ def packing(server, link, gpus, job_trace, job_ps):
             server[idx] += gpus
             job_trace.put([[idx, gpus]])
             job_ps.put(-1)
-            return [idx, gpus], -1
+            return [[idx, gpus]], -1
 
     # connection-oriented solution
 
@@ -558,13 +558,13 @@ class Job:
         self.cost = len(self.dis)
 
 
-def send_executor(role, des, idx, workerID, workerSum, tar_job):
+def send_executor(role, des, idx, workerID, workerSum, tar_job, pid):
     appID = tar_job.id
     gpu_num = 0
     if role == "worker":
         message = "execute_worker_" + str(workerID) + "_" + str(workerSum) + "_" + str(appID) + "_"
-        for m in tar_job.gpu:
-            if m[0] == workerID:
+        for m in tar_job.gpus:
+            if m[0] == pid:
                 message += str(m[1])
                 message += ","
                 gpu_num += 1
@@ -651,8 +651,8 @@ class Scheduler:
         # for placement
         self.server = []
         self.link = []
-        self.job_trace = Queue.queue()
-        self.job_ps = Queue.queue()
+        self.job_trace = Queue.Queue()
+        self.job_ps = Queue.Queue()
         self.ptov = {}
         self.vtop = {}
         for w in self.port_of_worker:
@@ -720,8 +720,8 @@ class Scheduler:
         tmp_id = job.id
         job.id = avail
 
-        job.dis, job.ps = wc_place.packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-
+        job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        print(job.dis)
         for m in job.dis:
             # decide GPU distribution
             idx = self.vtop[m[0]]
@@ -730,6 +730,7 @@ class Scheduler:
                 if self.dis[idx][i] == 0:
                     self.dis[idx][i] = 1
                     job.gpus.append([idx, i])
+                    print([idx, i])
                     cnt += 1
                 if cnt >= m[1]:
                     break
@@ -749,6 +750,8 @@ class Scheduler:
         if single_loop_back == -1:
             print("loopback selection error")
             return -1
+        else:
+            print("single_loop_back"+str(single_loop_back))
         job.loopback = single_loop_back
 
         pdis = []
@@ -782,11 +785,11 @@ class Scheduler:
         worker_sum = len(worker)
         threads = []
         if len(job.dis) > 1:  # need a ps
-            pt = threading.Thread(target=send_executor, args=("ps", self.ip_of_worker[self.vtop[job.ps]], tmp_id, 0, worker_sum, job))
+            pt = threading.Thread(target=send_executor, args=("ps", self.ip_of_worker[self.vtop[job.ps]], tmp_id, 0, worker_sum, job, self.vtop[job.ps]))
             pt.setDaemon(True)
             threads.append(pt)
         for i in range(worker_sum):
-            th = threading.Thread(target=send_executor, args=("worker", self.ip_of_worker[pdis[i][0]], tmp_id, i, worker_sum, job))
+            th = threading.Thread(target=send_executor, args=("worker", self.ip_of_worker[pdis[i][0]], tmp_id, i, worker_sum, job, pdis[i][0]))
             th.setDaemon(True)
             threads.append(th)
         for th in threads:
