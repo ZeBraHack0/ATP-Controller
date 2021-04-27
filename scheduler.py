@@ -574,15 +574,12 @@ def send_executor(role, des, idx, workerID, workerSum, tar_job, pid):
         print((des, port))
         # handshaking
         flag = 0
-        while cfq[idx] < 0:
+        while flag == 0:
             time.sleep(1)
             try:
                 if flag == 0:
                     client.connect((des, port))
                     print("worker " + str(workerID) + " connected")
-                    if mutex_cfq.acquire():
-                        cfq[idx] += gpu_num
-                        mutex_cfq.release()
                     flag = 1
             except Exception as e:
                 print(e)
@@ -602,15 +599,12 @@ def send_executor(role, des, idx, workerID, workerSum, tar_job, pid):
 
         # handshaking
         flag = 0
-        while cfq[idx] < 0:
+        while flag == 0:
             time.sleep(1)
             try:
                 if flag == 0:
                     client.connect((des, port))
                     print("server connected")
-                    if mutex_cfq.acquire():
-                        cfq[idx] += 1
-                        mutex_cfq.release()
                     flag = 1
             except Exception as e:
                 print(e)
