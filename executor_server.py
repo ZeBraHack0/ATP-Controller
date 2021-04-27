@@ -30,7 +30,7 @@ class myTCP(StreamRequestHandler):
                 model = s[7]
                 iter_num = s[8]
                 # other interface to open: dataset, model, iter_num
-                cmd = "sudo -E " + cmd + "DMLC_ROLE=worker DMLC_NUM_SERVER=1  DMLC_INTERFACE=enp178s0f0 DMLC_PS_ROOT_URI=192.168.0.3 DMLC_PS_ROOT_PORT=6767 python ~/byteps/launcher/launch.py python ~/byteps/example/pytorch/benchmark_byteps.py --model " + model + " --num-iters " + iter_num
+                cmd = "sudo -E " + cmd + "DMLC_ROLE=worker DMLC_NUM_SERVER=1  DMLC_INTERFACE=enp178s0f0 DMLC_PS_ROOT_URI=192.168.0.3 DMLC_PS_ROOT_PORT=6767 python ~/ATP-Controller/launcher/launch.py python ~/ATP-Controller/example/pytorch/benchmark_byteps.py --model " + model + " --num-iters " + iter_num
                 print(cmd)
 
                 os.system('echo %s|sudo -S %s' % (sudoPassword, cmd))
@@ -38,7 +38,7 @@ class myTCP(StreamRequestHandler):
                 print("finished!")
                 return
             if s[1] == "ps":
-                cmd = "sudo ~/ATP_NSDI21-master/atp/server/app " + s[2]
+                cmd = "sudo ~/ATP-Controller/server/app " + s[2]
                 os.system('echo %s|sudo -S %s' % (sudoPassword, cmd))
                 # data2 = self.request.recv(1024)
                 # if data2.decode('utf-8') == "execute_finished":

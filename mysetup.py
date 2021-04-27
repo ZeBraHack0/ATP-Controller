@@ -178,7 +178,7 @@ print("multicast done")
 ##########################################################
 
 ps = 24
-workers_in_used = [32, 16]
+workers_in_used = [8,0]
 appId = 2
 single_loopback_port = 44
 
