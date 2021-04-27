@@ -39,6 +39,7 @@ class myTCP(StreamRequestHandler):
                 return
             if s[1] == "ps":
                 cmd = "sudo ~/ATP-Controller/server/app " + s[2]
+                print(cmd)
                 os.system('echo %s|sudo -S %s' % (sudoPassword, cmd))
                 # data2 = self.request.recv(1024)
                 # if data2.decode('utf-8') == "execute_finished":

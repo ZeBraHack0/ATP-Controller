@@ -20,7 +20,7 @@ PER_GPU = 2
 DBL_MIN = float('-Infinity')
 
 port_of_worker = [56, 48, 40, 32, 24, 16, 8, 0, 4]
-loop_back = [12, 28, 20, 44, 36, 60, 52]
+loop_back = [20, 44, 36, 60, 52]
 MAC_address_of_worker = [ "b8:59:9f:1d:04:f2"
                         , "b8:59:9f:0b:30:72"
                         , "98:03:9b:03:46:50"
@@ -614,7 +614,7 @@ def send_executor(role, des, idx, workerID, workerSum, tar_job, pid):
         client.close()
         while True:
             time.sleep(5)
-            if cfq[idx] == tar_job.cost:
+            if cfq[idx] == tar_job.cost-1:
                 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 client.connect((des, 10000+appID))
                 message = "execute_finished"
