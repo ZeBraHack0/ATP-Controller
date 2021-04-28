@@ -653,6 +653,7 @@ class Scheduler:
             self.dis.append([])  # usage bitmap of GPUs
             self.gpus.append(0)  # total
             # self.rc += len(w)
+        topo()
         # handshaking
         for i in range(len(self.port_of_worker)):
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -756,6 +757,7 @@ class Scheduler:
         worker = [self.port_of_worker[x[0]] for x in pdis]
         if len(job.dis) > 1:  # need a ps and install rules
             config(job.id, worker, self.port_of_worker[self.vtop[job.ps]], self.single_loopback_port[single_loop_back])
+            print([job.id, worker, self.port_of_worker[self.vtop[job.ps]], self.single_loopback_port[single_loop_back]])
             if self.job_id[avail] == 0:
                 mcg_all = mc.mgrp_create(1000 - avail)
                 node_all = mc.node_create(
@@ -850,7 +852,7 @@ class myTCP(StreamRequestHandler):
                     time.sleep(5)
                     print("finished gpus: " + str(cfq.get(idx, -1)))
                     print("job cost: " + str(job.cost))
-                    if cfq.get(idx, -1) == job.cost + 1:  # check cfq
+                    if cfq.get(idx, -1) == job.cost:  # check cfq
                         print("finished "+str(job.id)+"!")
                         self.wfile.write("finished!".encode('utf-8'))
                         if mutex_sch.acquire():
@@ -867,11 +869,14 @@ class myTCP(StreamRequestHandler):
                             sch.job_id[job.id] = -1
                             sch.job_num -= 1
                             sch.loop_use[job.loopback] -= 1
+                            print(sch.server)
+                            print(sch.link)
+                            print(sch.dis)
                             # delete rules
                             if len(job.dis) > 1:  # need a ps
                                 worker = [sch.port_of_worker[sch.vtop[x[0]]] for x in job.dis]
-                                deconfig(job.id, worker, sch.port_of_worker[sch.vtop[job.ps]], sch.single_loopback_port)
-                            m = len(sch.job_ps)
+                                deconfig(job.id, worker, sch.port_of_worker[sch.vtop[job.ps]], sch.single_loopback_port[job.loopback])
+                            m = sch.job_ps.qsize()
                             for i in range(m):
                                 jtmp = sch.job_trace.get()
                                 ptmp = sch.job_ps.get()

@@ -95,16 +95,6 @@ for w in workers_in_used:
 
 print("outPort table 1 done")
 
-# for w in workers_in_used:
-#         p4_pd.outPort_table_table_delete_by_match_spec(
-#         p4_pd.outPort_table_match_spec_t(
-#             1 << 16,
-#             w,
-#             0,
-#             1))
-#
-# print("outPort table 1 delete")
-
 
 # Not Pending packet, Second time enter switch
 p4_pd.outPort_table_table_add_with_set_egr(
@@ -118,15 +108,6 @@ p4_pd.set_egr_action_spec_t(ps))
 
 print("outPort table 2 done")
 
-
-# p4_pd.outPort_table_table_delete_by_match_spec(
-# p4_pd.outPort_table_match_spec_t(
-#     1 << 16,
-#     single_loopback_port,
-#     1,
-#     1))
-#
-# print("outPort table 2 delete")
 
 # INGRESSPORT, Index
 # Worker1 to Worker8
