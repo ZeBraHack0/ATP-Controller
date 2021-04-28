@@ -24,7 +24,10 @@ class myTCP(StreamRequestHandler):
                 appID = s[4]
                 cmd += "P4ML_APP=" + appID + " "
                 gpu = s[5]
-                cmd += "CUDA_VISIBLE_DEVICES=" + gpu + " "
+                if len(gpu) > 1:
+                    cmd += "NVIDIA_VISIBLE_DEVICES=" + gpu + " "
+                else:
+                    cmd += "CUDA_VISIBLE_DEVICES=" + gpu + " "
                 dataset = s[6]
                 cmd += "EVAL_TYPE=" + dataset + " "
                 model = s[7]
