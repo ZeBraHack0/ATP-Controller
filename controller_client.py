@@ -20,7 +20,6 @@ client = socket(AF_INET, SOCK_STREAM)
 client.connect((host, port))
 print("client up, enter your job")
 
-
 try:
     cmd = "control_" + str(args.gpus) + "_" + args.dataset + "_" + args.model + "_" + str(args.num_iters)
     client.send(cmd.encode('utf-8'))
