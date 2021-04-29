@@ -41,6 +41,90 @@ ip_of_worker = [ "10.0.0.1"
                 , "10.0.0.9" ]
 
 
+def Tetris(server, link, gpus, job_trace, job_ps):
+    ls = []
+    n = len(server)
+    flag = 0
+    job = []
+    tmp = []
+    rest = gpus
+    for i in range(n):
+        tmp.append([i, server[i]*gpus/PER_GPU/PER_GPU+link[i]*1])
+    tmp = sorted(tmp, key=lambda x: x[1])
+    for i in range(n):
+        usage = min(rest, PER_GPU - server[tmp[i][0]])
+        server[tmp[i][0]] += usage
+        rest -= usage
+        if usage > 0:
+            job.append([tmp[i][0], usage])
+        if usage > 0 and usage != gpus:
+            link[tmp[i][0]] += 1
+            flag = 1
+        if rest == 0:
+            break
+    if flag == 1:
+        for i in range(n):
+            ls.append([i, link[i]])
+        ls = sorted(ls, key=lambda x: x[1])
+        job_ps.put(ls[0][0])
+        link[ls[0][0]] += 1
+        job_trace.put(job)
+        return job, ls[0][0]
+    else:
+        job_ps.put(-1)
+        job_trace.put(job)
+        return job, -1
+
+
+def Optimus(server, link, gpus, job_trace, job_ps):
+    n = len(server)
+    ls = []
+    flag = 0
+    job = []
+    tmp = []
+    rest = gpus
+    for i in range(n):
+        tmp.append([i, server[i]])
+    tmp = sorted(tmp, key=lambda x: x[1])
+    # tmp.reverse()
+    idx = []
+    for i in range(n):
+        usage = min(rest, PER_GPU - tmp[i][1])
+        idx.append(tmp[i])
+        rest -= usage
+        if rest == 0:
+            break
+    allocate = [0 for x in range(len(idx))]
+    k = 0
+    for i in range(gpus):
+        while True:
+            if allocate[k % len(idx)] < PER_GPU - idx[k % len(idx)][1]:
+                allocate[k % len(idx)] += 1
+                k += 1
+                break
+            else:
+                k += 1
+    for i in range(len(idx)):
+        server[idx[i][0]] += allocate[i]
+        if allocate[i] > 0:
+            job.append([idx[i][0], allocate[i]])
+        if 0 < allocate[i] < gpus:
+            link[idx[i][0]] += 1
+            flag = 1
+    if flag == 1:
+        for i in range(n):
+            ls.append([i, link[i]])
+        ls = sorted(ls, key=lambda x: x[1])
+        job_ps.put(ls[0][0])
+        link[ls[0][0]] += 1
+        job_trace.put(job)
+        return job, ls[0][0]
+    else:
+        job_ps.put(-1)
+        job_trace.put(job)
+        return job, -1
+
+
 def packing(server, link, gpus, job_trace, job_ps):
     n = len(server)
     # shadow link computing
@@ -715,7 +799,9 @@ class Scheduler:
         tmp_id = job.id
         job.id = avail
 
-        job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         print(job.dis)
         for m in job.dis:
             # decide GPU distribution
@@ -850,12 +936,15 @@ class myTCP(StreamRequestHandler):
                 mutex_sch.release()
                 while True:
                     time.sleep(5)
-                    print("finished gpus: " + str(cfq.get(idx, -1)))
-                    print("job cost: " + str(job.cost))
-                    if cfq.get(idx, -1) == job.cost:  # check cfq
-                        print("finished "+str(job.id)+"!")
-                        self.wfile.write("finished!".encode('utf-8'))
-                        if mutex_sch.acquire():
+                    if mutex_sch.acquire():
+                        flag = 0
+                        if len(job.dis) > 0 and job.ps != -1:
+                            flag = 1
+                        print("finished gpus: " + str(cfq.get(idx, -1)))
+                        print("job cost: " + str(job.cost))
+                        if cfq.get(idx, -1) == job.cost - 1 + flag:  # check cfq
+                            print("finished "+str(job.id)+"!")
+                            self.wfile.write("finished!".encode('utf-8'))
                             # release resources
                             for w in job.gpus:
                                 sch.dis[w[0]][w[1]] = 0
@@ -866,7 +955,10 @@ class myTCP(StreamRequestHandler):
                             if job.ps != -1:
                                 sch.link[job.ps] -= 1
                             sch.rc += job.cost
-                            sch.job_id[job.id] = -1
+                            if job.id in sch.mc_node:
+                                sch.job_id[job.id] = -1
+                            else:
+                                sch.job_id[job.id] = 0
                             sch.job_num -= 1
                             sch.loop_use[job.loopback] -= 1
                             print(sch.server)
@@ -884,7 +976,8 @@ class myTCP(StreamRequestHandler):
                                     sch.job_ps.put(ptmp)
                                     sch.job_trace.put(jtmp)
                             mutex_sch.release()
-                        break
+                            break
+                        mutex_sch.release()
         else:
             print("error message!")
             return

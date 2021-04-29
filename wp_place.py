@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import sys
 import math
 
-MACHINE = 10
+MACHINE = 5
 PER_GPU = 2
 DBL_MIN = float('-Infinity')
 JOB_TIME = 5
@@ -18,8 +18,9 @@ READ_INF = 0
 # trace = [4,2,3,9,9,8,7,6,5,6,6,7,8,9,10,5,2,4,6,7,8,9,2,10,5,7,6,7,8,9,10,5,5,6,9,8,7,6,5,6,4,2,1,3,2,4,6,5,8]
 # trace = [9,9,8,7,6,5,6,4,2,3,6,7,8,9,2,10,5,5,6,8,7,6,5,6,8,7,6,5,6,4,2,3,6,8,9,10,5,4,2,3,9,9,8,7]
 # trace = [16, 8, 4, 4, 8, 8, 8, 2, 2, 4, 2, 2, 2, 4, 8, 8, 4, 2, 4, 2, 2, 2, 8, 8, 2, 8, 4, 2, 2, 8, 2, 2, 2, 8, 8, 2, 4, 8, 8, 4, 8, 8, 2, 4, 4, 2, 4, 2, 2, 4, 8, 8, 2, 4, 2, 8, 2, 4, 8]
-# trace = np.random.poisson(PER_GPU, 50)
-trace = np.random.zipf(2, 50)
+# trace = np.random.poisson(PER_GPU, 20)
+trace = [1,1,3,2,2,3,5,2,2,2,3,5,2,1,3,3,1,3,1,2]
+#trace = np.random.zipf(2, 50)
 print(trace)
 
 
