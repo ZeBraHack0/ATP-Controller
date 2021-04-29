@@ -40,6 +40,7 @@ for i in range(len(gpus)):
     th = threading.Thread(target=inject, args=(i, 0))
     th.setDaemon(True)
     threads.append(th)
+    th.start()
     time.sleep(1)  # to guarantee order
 
 begin_time = time.time()
