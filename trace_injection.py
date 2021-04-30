@@ -11,6 +11,7 @@ cnt = 0
 mutex = threading.Lock()
 f = open("injection.txt", "w")
 
+
 def inject(idx, redundant):
     host = '10.0.0.10'
     port = 8888
@@ -31,7 +32,7 @@ def inject(idx, redundant):
         print(e)
     if mutex.acquire():
         tmp_time = time.time()
-        f.write(str(idx) + " " + str(tmp_time))
+        f.write(str(idx) + " " + str(tmp_time-begin_time) + "\n")
         global cnt
         cnt += 1
         mutex.release()
@@ -50,7 +51,7 @@ begin_time = time.time()
 while True:
     time.sleep(1)
     global cnt
-    print("current finished jobs:", cnt)
+    # print("current finished jobs:", cnt)
     if cnt >= len(gpus):
         break
 end_time = time.time()

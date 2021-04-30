@@ -66,9 +66,9 @@ MAC_address_of_worker = [ "b8:59:9f:1d:04:f2"
 
 # first Zero for pending
 # PSs = [0, 9, 8]
-ps = 24
-workers_in_used = [32, 16]
-appId = 1
+ps = 8
+workers_in_used = [32, 24, 16, 8]
+appId = 2
 
 
 # Normal Switch traffic
@@ -158,103 +158,103 @@ print("multicast done")
 
 ##########################################################
 
-ps = 24
-workers_in_used = [8,0]
-appId = 2
-single_loopback_port = 44
-
-# P4ML Traffic
-
-# enable this to use recirculate
-# No Pending packet, First time enter switch
-for w in workers_in_used:
-        p4_pd.outPort_table_table_add_with_set_egr_and_set_index(
-        p4_pd.outPort_table_match_spec_t(
-            appId << 16,
-            w,
-            0,
-            0),
-        # app1 -> worker3
-        p4_pd.set_egr_and_set_index_action_spec_t(single_loopback_port))
-
-print("outPort table 1 done")
-
+# ps = 24
+# workers_in_used = [8,0]
+# appId = 2
+# single_loopback_port = 44
+#
+# # P4ML Traffic
+#
+# # enable this to use recirculate
+# # No Pending packet, First time enter switch
 # for w in workers_in_used:
-#         p4_pd.outPort_table_table_delete_by_match_spec(
+#         p4_pd.outPort_table_table_add_with_set_egr_and_set_index(
 #         p4_pd.outPort_table_match_spec_t(
-#             1 << 16,
+#             appId << 16,
 #             w,
 #             0,
-#             1))
+#             0),
+#         # app1 -> worker3
+#         p4_pd.set_egr_and_set_index_action_spec_t(single_loopback_port))
 #
-# print("outPort table 1 delete")
-
-
-# Not Pending packet, Second time enter switch
-p4_pd.outPort_table_table_add_with_set_egr(
-p4_pd.outPort_table_match_spec_t(
-    appId << 16,
-    single_loopback_port,
-    1,
-    0),
-# app1 -> worker3
-p4_pd.set_egr_action_spec_t(ps))
-
-print("outPort table 2 done")
-
-
-# p4_pd.outPort_table_table_delete_by_match_spec(
+# print("outPort table 1 done")
+#
+# # for w in workers_in_used:
+# #         p4_pd.outPort_table_table_delete_by_match_spec(
+# #         p4_pd.outPort_table_match_spec_t(
+# #             1 << 16,
+# #             w,
+# #             0,
+# #             1))
+# #
+# # print("outPort table 1 delete")
+#
+#
+# # Not Pending packet, Second time enter switch
+# p4_pd.outPort_table_table_add_with_set_egr(
 # p4_pd.outPort_table_match_spec_t(
-#     1 << 16,
+#     appId << 16,
 #     single_loopback_port,
 #     1,
-#     1))
+#     0),
+# # app1 -> worker3
+# p4_pd.set_egr_action_spec_t(ps))
 #
-# print("outPort table 2 delete")
-
-# INGRESSPORT, Index
-# Worker1 to Worker8
-# for w in workers_in_used:
-#     p4_pd.drop_table_table_add_with_drop_pkt(
-#         p4_pd.drop_table_match_spec_t(
-#             w,
-#             0)
-#     )
+# print("outPort table 2 done")
 #
-# print("drop_table done")
-
-
-# for w in workers_in_used:
-#     p4_pd.drop_table_table_delete_by_match_spec(
-#         p4_pd.drop_table_match_spec_t(
-#             w,
-#             0)
-#     )
 #
-# print("drop_table delete")
-
-####### Server ########
-
-mcg_all = mc.mgrp_create(998)
-
-node_all = mc.node_create(
-    rid=998,
-    port_map=devports_to_mcbitmap(workers_in_used),
-    lag_map=lags_to_mcbitmap(([]))
-)
-mc.associate_node(mcg_all, node_all, xid=0, xid_valid=False)
-
-conn_mgr.complete_operations()
-
-p4_pd.multicast_table_table_add_with_multicast(
-    p4_pd.multicast_table_match_spec_t(
-        1,
-        appId << 16,
-        ps,
-        0),
-    # multicast app1 -> worker1, 2
-    p4_pd.multicast_action_spec_t(998)
-)
+# # p4_pd.outPort_table_table_delete_by_match_spec(
+# # p4_pd.outPort_table_match_spec_t(
+# #     1 << 16,
+# #     single_loopback_port,
+# #     1,
+# #     1))
+# #
+# # print("outPort table 2 delete")
+#
+# # INGRESSPORT, Index
+# # Worker1 to Worker8
+# # for w in workers_in_used:
+# #     p4_pd.drop_table_table_add_with_drop_pkt(
+# #         p4_pd.drop_table_match_spec_t(
+# #             w,
+# #             0)
+# #     )
+# #
+# # print("drop_table done")
+#
+#
+# # for w in workers_in_used:
+# #     p4_pd.drop_table_table_delete_by_match_spec(
+# #         p4_pd.drop_table_match_spec_t(
+# #             w,
+# #             0)
+# #     )
+# #
+# # print("drop_table delete")
+#
+# ####### Server ########
+#
+# mcg_all = mc.mgrp_create(998)
+#
+# node_all = mc.node_create(
+#     rid=998,
+#     port_map=devports_to_mcbitmap(workers_in_used),
+#     lag_map=lags_to_mcbitmap(([]))
+# )
+# mc.associate_node(mcg_all, node_all, xid=0, xid_valid=False)
+#
+# conn_mgr.complete_operations()
+#
+# p4_pd.multicast_table_table_add_with_multicast(
+#     p4_pd.multicast_table_match_spec_t(
+#         1,
+#         appId << 16,
+#         ps,
+#         0),
+#     # multicast app1 -> worker1, 2
+#     p4_pd.multicast_action_spec_t(998)
+# )
 
 print("multicast done")
 

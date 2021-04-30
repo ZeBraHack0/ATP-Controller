@@ -21,7 +21,7 @@ DBL_MIN = float('-Infinity')
 global fn
 
 port_of_worker = [56, 48, 40, 32, 24, 16, 8, 0, 4]
-loop_back = [20, 44, 36, 60, 52]
+loop_back = [12, 28, 20, 44, 36, 60, 52]
 MAC_address_of_worker = [ "b8:59:9f:1d:04:f2"
                         , "b8:59:9f:0b:30:72"
                         , "98:03:9b:03:46:50"
@@ -834,6 +834,7 @@ class Scheduler:
         self.idx = 0
         self.port_of_worker, self.ip_of_worker, self.MAC_address_of_worker, self.single_loopback_port = port_of_worker, ip_of_worker, MAC_address_of_worker, loop_back
         self.loop_use = [0 for x in self.single_loopback_port]
+        self.loop_num = len(self.single_loopback_port)
         # for placement
         self.server = []
         self.link = []
@@ -895,6 +896,7 @@ class Scheduler:
     #         self.rc -= j.cost
 
     def place(self, job):
+        print("place job "+str(job.id))
         # decide new job IDs
         avail = -1  # 1000 - appID
         for i in range(1, 999):
@@ -930,22 +932,6 @@ class Scheduler:
         self.rc -= job.cost
         self.job_num += 1
 
-        # decide single_loop_back
-        i = 0
-        single_loop_back = -1
-        for bit in self.loop_use:
-            if bit < 2:
-                single_loop_back = i
-                self.loop_use[i] += 1
-                break
-            i += 1
-        if single_loop_back == -1:
-            print("loopback selection error")
-            return -1
-        else:
-            print("single_loop_back"+str(single_loop_back))
-        job.loopback = single_loop_back
-
         pdis = []
         for m in job.dis:
             pdis.append([self.vtop[m[0]], m[1]])
@@ -953,6 +939,22 @@ class Scheduler:
         # install rules
         worker = [self.port_of_worker[x[0]] for x in pdis]
         if len(job.dis) > 1:  # need a ps and install rules
+            # decide single_loop_back
+            i = 0
+            single_loop_back = -1
+            for bit in self.loop_use:
+                if bit < 1:
+                    single_loop_back = i
+                    self.loop_use[i] += 1
+                    self.loop_num -= 1
+                    break
+                i += 1
+            if single_loop_back == -1:
+                print("loopback selection error")
+                return -1
+            else:
+                print("single_loop_back: " + str(single_loop_back))
+            job.loopback = single_loop_back
             config(job.id, worker, self.port_of_worker[self.vtop[job.ps]], self.single_loopback_port[single_loop_back])
             print([job.id, worker, self.port_of_worker[self.vtop[job.ps]], self.single_loopback_port[single_loop_back]])
             if self.job_id[avail] == 0:
@@ -966,11 +968,13 @@ class Scheduler:
                 conn_mgr.complete_operations()
                 self.mc_node[avail] = [node_all, mcg_all]
             else:
+                print("mc_node reuse!")
                 mc.node_update(
                     self.mc_node[avail][0],
                     port_map=devports_to_mcbitmap(worker),
                     lag_map=lags_to_mcbitmap(([]))
                 )
+
 
         self.job_id[avail] = 1
 
@@ -1011,8 +1015,9 @@ class Scheduler:
         while i < len(self.q1):
             if self.rc <= 0:
                 break
-            if self.q1[i].cost <= self.rc:
+            if self.q1[i].cost <= self.rc and self.loop_num > 0:
                 self.place(self.q1[i])
+                print("rest resources:" + str(self.rc))
                 self.q1.pop(i)
                 i -= 1
             else:
@@ -1051,10 +1056,11 @@ class myTCP(StreamRequestHandler):
                         flag = 0
                         if len(job.dis) > 0 and job.ps != -1:
                             flag = 1
-                        print("finished gpus: " + str(cfq.get(idx, -1)))
-                        print("job cost: " + str(job.cost))
+                        # print("finished gpus: " + str(cfq.get(idx, -1)))
+                        # print("job cost: " + str(job.cost))
                         if cfq.get(idx, -1) == job.cost - 1 + flag:  # check cfq
                             print("finished job "+str(idx)+"!")
+                            print(job.dis)
                             self.wfile.write("finished!".encode('utf-8'))
                             # release resources
                             for w in job.gpus:
@@ -1065,13 +1071,14 @@ class myTCP(StreamRequestHandler):
                                     sch.link[p[0]] -= 1
                             if job.ps != -1:
                                 sch.link[job.ps] -= 1
+                                sch.loop_use[job.loopback] -= 1
+                                sch.loop_num += 1
                             sch.rc += job.cost
                             if job.id in sch.mc_node:
                                 sch.job_id[job.id] = -1
                             else:
                                 sch.job_id[job.id] = 0
                             sch.job_num -= 1
-                            sch.loop_use[job.loopback] -= 1
                             print(sch.server)
                             print(sch.link)
                             print(sch.dis)
@@ -1099,7 +1106,7 @@ def run_schedulor():
         time.sleep(5)
         if mutex_sch.acquire():
             sch.schedule()
-            print("rest resources:"+str(sch.rc))
+            # print("rest resources:"+str(sch.rc))
             mutex_sch.release()
 
 
