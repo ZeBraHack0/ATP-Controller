@@ -9,7 +9,7 @@ dataset = ['benchmark' for y in range(len(gpus))]
 iteration = [10 for z in range(len(gpus))]
 cnt = 0
 mutex = threading.Lock()
-
+f = open("injection.txt", "w")
 
 def inject(idx, redundant):
     host = '10.0.0.10'
@@ -25,10 +25,13 @@ def inject(idx, redundant):
         print("submit job " + str(idx) + " successfully!")
         print("waiting for job " + str(idx) + " finishing...")
         data = client.recv(bufsize)
-        print(data.decode('utf-8'))
+        # print(data.decode('utf-8'))
+        print("job " + str(idx) + " finished!")
     except Exception as e:
         print(e)
     if mutex.acquire():
+        tmp_time = time.time()
+        f.write(str(idx) + " " + str(tmp_time))
         global cnt
         cnt += 1
         mutex.release()
@@ -53,5 +56,4 @@ while True:
 end_time = time.time()
 run_time = end_time-begin_time
 print('runtime:', run_time)
-f = open("injection.txt", "w")
 f.write(str(run_time))

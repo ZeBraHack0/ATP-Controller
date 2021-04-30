@@ -653,6 +653,8 @@ if __name__ == "__main__":
             if job_trace.qsize() > 0:
                 avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
                 res.append(avg)
+            print(link)
+            print(server)
             if job_trace.qsize() == 0:
                 break
             term += 1

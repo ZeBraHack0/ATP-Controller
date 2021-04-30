@@ -18,6 +18,7 @@ link_capacity = 60  # Gbps
 RTT = 70  # microsecond
 PER_GPU = 2
 DBL_MIN = float('-Infinity')
+global fn
 
 port_of_worker = [56, 48, 40, 32, 24, 16, 8, 0, 4]
 loop_back = [20, 44, 36, 60, 52]
@@ -39,6 +40,113 @@ ip_of_worker = [ "10.0.0.1"
                 , "10.0.0.7"
                 , "10.0.0.8"
                 , "10.0.0.9" ]
+
+
+def gpu_balance(server, link, gpus, job_trace, job_ps):
+    n = len(server)
+    ls = []
+    flag = 0
+    job = []
+    tmp = []
+    rest = gpus
+    for i in range(n):
+        tmp.append([i, server[i]])
+    tmp = sorted(tmp, key=lambda x: x[1])
+    # tmp.reverse()
+    for i in range(n):
+        usage = min(rest, PER_GPU - tmp[i][1])
+        server[tmp[i][0]] += usage
+        rest -= usage
+        if usage > 0:
+            job.append([tmp[i][0], usage])
+        if usage > 0 and usage != gpus:
+            link[tmp[i][0]] += 1
+            flag = 1
+        if rest == 0:
+            break
+    if flag == 1:
+        for i in range(n):
+            ls.append([i, link[i]])
+        ls = sorted(ls, key=lambda x: x[1])
+        job_ps.put(ls[0][0])
+        link[ls[0][0]] += 1
+        job_trace.put(job)
+        return job, ls[0][0]
+    else:
+        job_ps.put(-1)
+        job_trace.put(job)
+        return job, -1
+
+
+def link_balance(server, link, gpus, job_trace, job_ps):
+    n = len(server)
+    tmp = []
+    ls = []
+    flag = 0
+    job = []
+    rest = gpus
+    for i in range(n):
+        tmp.append([i, link[i]])
+    tmp = sorted(tmp, key=lambda x: x[1])
+    for i in range(n):
+        usage = min(rest, PER_GPU - server[tmp[i][0]])
+        server[tmp[i][0]] += usage
+        rest -= usage
+        if usage > 0:
+            job.append([tmp[i][0], usage])
+        if usage > 0 and usage != gpus:
+            link[tmp[i][0]] += 1
+            flag = 1
+        if rest == 0:
+            break
+    if flag == 1:
+        for i in range(n):
+            ls.append([i, link[i]])
+        ls = sorted(ls, key=lambda x: x[1])
+        job_ps.put(ls[0][0])
+        link[ls[0][0]] += 1
+        job_trace.put(job)
+        return job, ls[0][0]
+    else:
+        job_ps.put(-1)
+        job_trace.put(job)
+        return job, -1
+
+
+def least_fragment(server, link, gpus, job_trace, job_ps):
+    n = len(server)
+    tmp = []
+    ls = []
+    flag = 0
+    job = []
+    rest = gpus
+    for i in range(n):
+        tmp.append([i, server[i]])
+    tmp = sorted(tmp, key=lambda x: x[1])
+    tmp.reverse()
+    for i in range(n):
+        usage = min(rest, PER_GPU - tmp[i][1])
+        server[tmp[i][0]] += usage
+        rest -= usage
+        if usage > 0:
+            job.append([tmp[i][0], usage])
+        if usage > 0 and usage != gpus:
+            link[tmp[i][0]] += 1
+            flag = 1
+        if rest == 0:
+            break
+    if flag == 1:
+        for i in range(n):
+            ls.append([i, link[i]])
+        ls = sorted(ls, key=lambda x: x[1])
+        job_ps.put(ls[0][0])
+        link[ls[0][0]] += 1
+        job_trace.put(job)
+        return job, ls[0][0]
+    else:
+        job_ps.put(-1)
+        job_trace.put(job)
+        return job, -1
 
 
 def Tetris(server, link, gpus, job_trace, job_ps):
@@ -801,7 +909,10 @@ class Scheduler:
 
         # job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = link_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         print(job.dis)
         for m in job.dis:
             # decide GPU distribution
@@ -943,7 +1054,7 @@ class myTCP(StreamRequestHandler):
                         print("finished gpus: " + str(cfq.get(idx, -1)))
                         print("job cost: " + str(job.cost))
                         if cfq.get(idx, -1) == job.cost - 1 + flag:  # check cfq
-                            print("finished "+str(job.id)+"!")
+                            print("finished job "+str(idx)+"!")
                             self.wfile.write("finished!".encode('utf-8'))
                             # release resources
                             for w in job.gpus:
