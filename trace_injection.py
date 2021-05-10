@@ -60,4 +60,4 @@ while True:
 end_time = time.time()
 run_time = end_time-begin_time
 print('runtime:', run_time)
-f.write(str(run_time))
+f1.write(str(run_time))
