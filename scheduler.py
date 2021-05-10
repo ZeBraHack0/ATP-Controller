@@ -1068,9 +1068,9 @@ class Scheduler:
         job.id = avail
 
         # job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        # job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = link_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         print(job.dis)

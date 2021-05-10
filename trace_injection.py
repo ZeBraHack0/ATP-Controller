@@ -38,6 +38,7 @@ def inject(idx, redundant):
         f2.write(str(idx) + "\n")
         global cnt
         cnt += 1
+        print(cnt)
         mutex.release()
     client.close()
 
@@ -54,11 +55,16 @@ for i in range(len(gpus)):
 begin_time = time.time()
 while True:
     time.sleep(1)
-    global cnt
-    # print("current finished jobs:", cnt)
-    if cnt >= len(gpus):
-        break
+    if mutex.acquire():
+        global cnt
+        # print("current finished jobs:", cnt)
+        if cnt >= len(gpus):
+            mutex.release()
+            break
+        mutex.release()
 end_time = time.time()
 run_time = end_time-begin_time
 print('runtime:', run_time)
 f1.write(str(run_time))
+f1.close()
+f2.close()
