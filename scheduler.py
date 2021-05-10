@@ -1067,8 +1067,8 @@ class Scheduler:
         tmp_id = job.id
         job.id = avail
 
-        job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        # job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = link_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)

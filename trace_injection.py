@@ -7,7 +7,7 @@ gpus = [3, 1, 1, 3, 2, 3, 1, 1, 1, 2, 2, 3, 1, 1, 1, 2, 2, 2, 2, 2]
 models = ['vgg16' for x in range(len(gpus))]
 dataset = ['benchmark' for y in range(len(gpus))]
 iteration = [10 for z in range(len(gpus))]
-cnt = 0
+global cnt
 mutex = threading.Lock()
 f1 = open("inject_time.txt", "w")
 f2 = open("inject_idx.txt", "w")
@@ -43,6 +43,7 @@ def inject(idx, redundant):
 
 
 threads = []
+cnt = 0
 for i in range(len(gpus)):
     th = threading.Thread(target=inject, args=(i, 0))
     th.setDaemon(True)
