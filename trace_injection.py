@@ -9,7 +9,9 @@ dataset = ['benchmark' for y in range(len(gpus))]
 iteration = [10 for z in range(len(gpus))]
 cnt = 0
 mutex = threading.Lock()
-f = open("injection.txt", "w")
+f1 = open("inject_time.txt", "w")
+f2 = open("inject_idx.txt", "w")
+global begin_time
 
 
 def inject(idx, redundant):
@@ -32,7 +34,8 @@ def inject(idx, redundant):
         print(e)
     if mutex.acquire():
         tmp_time = time.time()
-        f.write(str(tmp_time-begin_time) + "\n")
+        f1.write(str(tmp_time-begin_time) + "\n")
+        f2.write(str(idx) + "\n")
         global cnt
         cnt += 1
         mutex.release()

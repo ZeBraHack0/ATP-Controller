@@ -437,7 +437,7 @@ def packing(server, link, gpus, job_trace, job_ps):
             server[idx] += gpus
             job_trace.put([[idx, gpus]])
             job_ps.put(-1)
-            return
+            return [[idx, gpus]], -1
 
     # connection-oriented solution
 
@@ -532,6 +532,7 @@ def packing(server, link, gpus, job_trace, job_ps):
     # print(ls[0][1])
     link[ls[0][0]] += 1
     job_trace.put(job)
+    return job, ls[0][0]
 
 
 def topo(file="controller/topology", initial=False):
