@@ -3,7 +3,7 @@ import threading
 import time
 
 # gpus = [3, 1, 2, 1, 2, 1, 5, 4, 4, 1, 2]
-gpus = [3, 1, 1, 3, 2, 3, 1, 1, 1, 2, 2, 3, 1, 1, 1, 2, 2, 2, 2, 2]
+gpus = [1,1,3,2,2,3,5,2,2,2,3,5,2,1,3,3,1,3,1,2]
 models = ['vgg16' for x in range(len(gpus))]
 dataset = ['benchmark' for y in range(len(gpus))]
 iteration = [10 for z in range(len(gpus))]
