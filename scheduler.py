@@ -19,6 +19,7 @@ RTT = 70  # microsecond
 PER_GPU = 2
 DBL_MIN = float('-Infinity')
 global fn
+PTA = 10
 
 port_of_worker = [56, 48, 40, 32, 24, 16, 8, 0, 4]
 loop_back = [12, 28, 20, 44, 36, 60, 52]
@@ -233,6 +234,147 @@ def Optimus(server, link, gpus, job_trace, job_ps):
         return job, -1
 
 
+def bw_evaluation(server, tmp_job, job_trace, job_ps):
+    m = job_trace.qsize()
+    n = len(server)
+    job_link = [[] for x in range(m)]
+    server_link = [[] for x in range(n)]
+    job_bw = [[0.0, 0.0] for x in range(m)]
+    server_bw = [1.0 for x in range(n)]
+    alloc = 0
+    pta = PTA
+    for i in range(m):
+        job = job_trace.get()
+        job_trace.put(job)
+        ps = job_ps.get()
+        job_ps.put(ps)
+        if ps != -1:
+            job_link[i].append(-1*ps-1)
+            server_link[ps].append(-1*i-1)
+            for p in job:
+                job_link[i].append(p[0])
+                server_link[p[0]].append(i)
+        else:
+            alloc += 1
+    if len(tmp_job) > 1:
+        m += 1
+        job_link.append([])
+        job_bw.append([0.0, 0.0])
+        for p in tmp_job:
+            job_link[m-1].append(p[0])
+            server_link[p[0]].append(m-1)
+
+    # stage 1
+    for i in range(n):
+        min_bw = 1.1
+        bottle = -1
+        for j in range(n):
+            if server_bw[j] > 0 and len(server_link[j]) > 0 and server_bw[j]/len(server_link[j]) < min_bw:
+                bottle = j
+                min_bw = server_bw[j]/len(server_link[j])
+        if bottle == -1:
+            break
+        bw = server_bw[bottle]/len(server_link[bottle])
+        if pta/(m-alloc) < bw:  # step into stage two
+            break
+        for j in server_link[bottle]:
+            jdx = j
+            if jdx < 0:
+                jdx = -1*(jdx + 1)
+            if job_bw[jdx][0] > 0:
+                continue
+            job_bw[jdx][0] = bw
+            alloc += 1
+            pta -= bw
+            for s in job_link[jdx]:
+                sdx = s
+                if sdx < 0:
+                    sdx = -1*(sdx + 1)
+                if sdx != bottle:
+                    if s < 0:
+                        server_link[sdx].remove(-1*jdx-1)
+                    else:
+                        server_link[sdx].remove(jdx)
+                server_bw[sdx] -= bw
+            server_link[bottle] = []
+        if alloc == m:
+            break
+
+    # stage 2
+    if alloc < m:
+        a = pta / (m - alloc)
+        for i in range(m):
+            if job_bw[i][0] == 0 and len(job_link[i]) > 1:
+                job_bw[i][0] = a
+                for s in job_link[i]:
+                    sdx = s
+                    if sdx < 0:
+                        sdx = -1 * (sdx + 1)
+                    server_bw[sdx] -= a
+
+        for i in range(n):
+            min_bw = 1.1
+            bottle = -1
+            for j in range(n):
+                x = 0
+                for k in server_link[j]:
+                    if k >= 0:
+                        x += 1
+                    else:
+                        kdx = -1*(k+1)
+                        x += len(job_link[kdx]) - 1
+                if server_bw[j] > 0 and x > 0 and server_bw[j]/x < min_bw:
+                    bottle = j
+                    min_bw = server_bw[j]/x
+            if bottle == -1:
+                break
+            bw = min_bw
+            for j in server_link[bottle]:
+                jdx = j
+                if jdx < 0:
+                    jdx = -1*(jdx + 1)
+                if job_bw[jdx][1] > 0:
+                    continue
+                job_bw[jdx][1] = bw
+                alloc += 1
+                for s in job_link[jdx]:
+                    sdx = s
+                    if sdx < 0:
+                        sdx = -1*(sdx + 1)
+                    if s < 0:
+                        if sdx != bottle:
+                            server_link[sdx].remove(-1*jdx-1)
+                        server_bw[sdx] -= bw * (len(job_link[jdx])-1)
+                    else:
+                        if sdx != bottle:
+                            server_link[sdx].remove(jdx)
+                        server_bw[sdx] -= bw
+                server_link[bottle] = []
+            if alloc == m:
+                break
+    bandwidth = [x[0]+x[1] for x in job_bw]
+
+    num = 0
+    sums = 0.0
+    for x in bandwidth:
+        # if x > 0:
+        #     sums += x
+        #     num += 1
+        if x > 1:
+            print("warning!")
+        if x > 0:
+            sums += x
+            num += 1
+        else:
+            sums += 0
+            # num += 1
+    if num > 0:
+        avg = sums / num
+    else:
+        avg = 0
+    # print(avg)
+    return avg, bandwidth, server_bw
+
 def packing(server, link, gpus, job_trace, job_ps):
     n = len(server)
     # shadow link computing
@@ -245,41 +387,57 @@ def packing(server, link, gpus, job_trace, job_ps):
             up_link = max(up_link, link[i])
         if link[i] == 0:
             empty = 1
-    m = job_trace.qsize()
-    for i in range(m):
-        job = job_trace.get()
-        job_trace.put(job)
-        ps = job_ps.get()
-        job_ps.put(ps)
-        if ps == -1:
-            continue
-        max_link = link[ps]
-        for j in job:
-            max_link = max(max_link, link[j[0]])
-        for j in job:
-            if link[j[0]] == 1 and max_link > 1:
-                shadow_link[j[0]] = 0
+    # m = job_trace.qsize()
+    # for i in range(m):
+    #     job = job_trace.get()
+    #     job_trace.put(job)
+    #     ps = job_ps.get()
+    #     job_ps.put(ps)
+    #     if ps == -1:
+    #         continue
+    #     max_link = link[ps]
+    #     for j in job:
+    #         max_link = max(max_link, link[j[0]])
+    #     for j in job:
+    #         if link[j[0]] == 1 and max_link > 1:
+    #             shadow_link[j[0]] = 0
 
-    # print(link)
+    avg, bandwidth, sbw = bw_evaluation(server, [], job_trace, job_ps)
+
     ls = []
-    flag = 0
     # connectionless solution
     if gpus <= PER_GPU:
-        # ATP_balance(server, link, gpus, job_trace)
-        # return
         min_del = sys.maxsize
-        min_link = sys.maxsize
+        min_link = 0
+        min_bw = 0
         idx = -1
         for i in range(n):
-            if PER_GPU - server[i] >= gpus and (min_del > PER_GPU - server[i] - gpus or (min_del == PER_GPU - server[i] - gpus and min_link > link[i])):
-                min_del = PER_GPU - server[i] - gpus
-                min_link = link[i]
+            if PER_GPU - server[i] == gpus:
                 idx = i
+                break
+            if PER_GPU - server[i] > gpus:
+                if min_del > PER_GPU - server[i] - gpus:
+                    min_del = PER_GPU - server[i] - gpus
+                    min_link = link[i]
+                    min_bw = sbw[i]
+                    idx = i
+                elif min_del == PER_GPU - server[i] - gpus:
+                    if min_link < link[i]:
+                        min_del = PER_GPU - server[i] - gpus
+                        min_link = link[i]
+                        min_bw = sbw[i]
+                        idx = i
+                    elif min_link == link[i]:
+                        if min_bw < sbw[i]:
+                            min_del = PER_GPU - server[i] - gpus
+                            min_link = link[i]
+                            min_bw = sbw[i]
+                            idx = i
         if idx != -1:
             server[idx] += gpus
             job_trace.put([[idx, gpus]])
             job_ps.put(-1)
-            return [[idx, gpus]], -1
+            return
 
     # connection-oriented solution
 
@@ -290,9 +448,10 @@ def packing(server, link, gpus, job_trace, job_ps):
     for i in range(n):
         w = PER_GPU - server[i]
         # v = -1 * (1 - 1 / (shadow_link[i] + 1))
-        v = 0
-        if shadow_link[i] > 0:
-            v = -shadow_link[i]*(1/shadow_link[i]-1/(shadow_link[i]+1))
+        # v = 0
+        # if shadow_link[i] > 0:
+        #     v = -shadow_link[i]*(1/shadow_link[i]-1/(shadow_link[i]+1))
+        v = sbw[i] - (1/(link[i]+1))
         l = link[i]
         for s in range(up_link + 1):
             for j in range(gpus+PER_GPU, -1, -1):
@@ -311,9 +470,7 @@ def packing(server, link, gpus, job_trace, job_ps):
     state = 0
     for s in range(up_link + 1):
         if dp[s][gpus] > level:  # exist exact solution
-            a = dp[s][gpus]
             ans = gpus
-            # level = int(math.log(dp[gpus]*-1, 100))
             level = dp[s][gpus]
             state = s
     if ans == -1 or empty:
@@ -321,7 +478,6 @@ def packing(server, link, gpus, job_trace, job_ps):
             for i in range(gpus+1, gpus+PER_GPU+1):
                 if dp[s][i] == DBL_MIN:
                     continue
-                # tmp = int(math.log(dp[i]*-1, 100))
                 tmp = dp[s][i]
                 if tmp > level:
                     ans = i
@@ -350,6 +506,7 @@ def packing(server, link, gpus, job_trace, job_ps):
         link[j[0]] += 1
 
     # compute best ps
+    avg, bandwidth, sbw = bw_evaluation(server, job, job_trace, job_ps)
     for i in range(n):
         shadow_link[i] = link[i]
     m = job_trace.qsize()
@@ -369,13 +526,12 @@ def packing(server, link, gpus, job_trace, job_ps):
         if link[ps] == 1 and max_link > 1:
             shadow_link[ps] = 0
     for i in range(n):
-        ls.append([i, link[i]+shadow_link[i]])
-    ls = sorted(ls, key=lambda x: x[1])
+        ls.append([i, 1 - sbw[i], link[i]+shadow_link[i]])
+    ls = sorted(ls, key=lambda x: [x[1], x[2]])
     job_ps.put(ls[0][0])
     # print(ls[0][1])
     link[ls[0][0]] += 1
     job_trace.put(job)
-    return job, ls[0][0]
 
 
 def topo(file="controller/topology", initial=False):
@@ -864,6 +1020,7 @@ class Scheduler:
                 # ban_list.append(i)
                 print("worker " + str(i)+" disconnected!")
         self.rc_sum = self.rc
+        print("total GPU: " + str(self.rc_sum))
         for i in range(len(self.gpus)):
             if self.gpus[i] > 0:
                 self.server.append(0)
