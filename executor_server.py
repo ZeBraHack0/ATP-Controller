@@ -7,7 +7,7 @@ import nvgpu
 
 sudoPassword = 'zbh'
 
-
+print(str(len(nvgpu.available_gpus())) + " is available!")
 class myTCP(StreamRequestHandler):
     def handle(self):
         data = self.request.recv(1024)
