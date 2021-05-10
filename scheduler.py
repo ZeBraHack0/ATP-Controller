@@ -369,7 +369,7 @@ def packing(server, link, gpus, job_trace, job_ps):
         if link[ps] == 1 and max_link > 1:
             shadow_link[ps] = 0
     for i in range(n):
-        ls.append([i, link[i]])
+        ls.append([i, link[i]+shadow_link[i]])
     ls = sorted(ls, key=lambda x: x[1])
     job_ps.put(ls[0][0])
     # print(ls[0][1])
@@ -909,12 +909,12 @@ class Scheduler:
         tmp_id = job.id
         job.id = avail
 
-        # job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = link_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         print(job.dis)
         for m in job.dis:
             # decide GPU distribution
@@ -1058,7 +1058,7 @@ class myTCP(StreamRequestHandler):
                             flag = 1
                         # print("finished gpus: " + str(cfq.get(idx, -1)))
                         # print("job cost: " + str(job.cost))
-                        if cfq.get(idx, -1) == job.cost - 1 + flag:  # check cfq
+                        if cfq.get(idx, -1) >= job.cost - 1:  # check cfq
                             print("finished job "+str(idx)+"!")
                             print(job.dis)
                             self.wfile.write("finished!".encode('utf-8'))
@@ -1103,7 +1103,7 @@ class myTCP(StreamRequestHandler):
 
 def run_schedulor():
     while True:
-        time.sleep(5)
+        time.sleep(1)
         if mutex_sch.acquire():
             sch.schedule()
             # print("rest resources:"+str(sch.rc))

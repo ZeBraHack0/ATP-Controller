@@ -118,6 +118,73 @@ def linear_evaluation(server, link, job_trace, job_ps):
     return avg, res['x']
 
 
+def bw_evaluation(server, link, job_trace, job_ps):
+    m = job_trace.qsize()
+    n = len(server)
+    job_link = [[] for x in range(m)]
+    server_link = [[] for x in range(n)]
+    job_bw = [0.0 for x in range(m)]
+    server_bw = [1.0 for x in range(n)]
+    alloc = 0
+    for i in range(m):
+        job = job_trace.get()
+        job_trace.put(job)
+        ps = job_ps.get()
+        job_ps.put(ps)
+        if ps != -1:
+            job_link[i].append(ps)
+            server_link[ps].append(i)
+            for p in job:
+                if p[0] != ps:
+                    job_link[i].append(p[0])
+                server_link[p[0]].append(i)
+        else:
+            alloc += 1
+
+    for i in range(n):
+        min_bw = 1.1
+        bottle = -1
+        for j in range(n):
+            if server_bw[j] > 0 and len(server_link[j]) > 0 and server_bw[j]/len(server_link[j]) < min_bw:
+                bottle = j
+                min_bw = server_bw[j]/len(server_link[j])
+        if bottle == -1:
+            break
+        bw = server_bw[bottle]/len(server_link[bottle])
+        for j in server_link[bottle]:
+            if job_bw[j] > 0:
+                continue
+            job_bw[j] = bw
+            alloc += 1
+            for s in job_link[j]:
+                if s != bottle:
+                    server_link[s].remove(j)
+                server_bw[s] -= bw
+            server_link[bottle] = []
+        if alloc == m:
+            break
+    num = 0
+    sums = 0.0
+    for x in job_bw:
+        # if x > 0:
+        #     sums += x
+        #     num += 1
+        if x > 1:
+            print("warning!")
+        if x > 0:
+            sums += 1 / x
+            num += 1
+        else:
+            sums += 0
+            num += 1
+    if num > 0:
+        avg = sums / num
+    else:
+        avg = 0
+    # print(avg)
+    return avg, job_bw
+
+
 def evaluation(server, link):
     n = 0
     bw = 0
@@ -543,7 +610,7 @@ if __name__ == "__main__":
                 cur_sum += t
                 idx += 1
             if job_trace.qsize() > 0:
-                avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
+                avg, bandwidth = bw_evaluation(server, link, job_trace, job_ps)
                 res.append(avg)
             if job_trace.qsize() == 0:
                 break
@@ -597,7 +664,7 @@ if __name__ == "__main__":
                 cur_sum += t
                 idx += 1
             if job_trace.qsize() > 0:
-                avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
+                avg, bandwidth = bw_evaluation(server, link, job_trace, job_ps)
                 res.append(avg)
             if job_trace.qsize() == 0:
                 break
@@ -651,7 +718,7 @@ if __name__ == "__main__":
                 cur_sum += t
                 idx += 1
             if job_trace.qsize() > 0:
-                avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
+                avg, bandwidth = bw_evaluation(server, link, job_trace, job_ps)
                 res.append(avg)
             print(link)
             print(server)
@@ -707,7 +774,7 @@ if __name__ == "__main__":
                 cur_sum += t
                 idx += 1
             if job_trace.qsize() > 0:
-                avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
+                avg, bandwidth = bw_evaluation(server, link, job_trace, job_ps)
                 res.append(avg)
             if job_trace.qsize() == 0:
                 break
@@ -763,7 +830,7 @@ if __name__ == "__main__":
                 cur_sum += t
                 idx += 1
             if job_trace.qsize() > 0:
-                avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
+                avg, bandwidth = bw_evaluation(server, link, job_trace, job_ps)
                 res.append(avg)
             if job_trace.qsize() == 0:
                 break
@@ -815,7 +882,7 @@ if __name__ == "__main__":
     #             cur_sum += t
     #             idx += 1
     #         if job_trace.qsize() > 0:
-    #             avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
+    #             avg, bandwidth = bw_evaluation(server, link, job_trace, job_ps)
     #             res.append(avg)
     #         if job_trace.qsize() == 0:
     #             break
@@ -870,7 +937,7 @@ if __name__ == "__main__":
                 cur_sum += t
                 idx += 1
             if job_trace.qsize() > 0:
-                avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
+                avg, bandwidth = bw_evaluation(server, link, job_trace, job_ps)
                 res.append(avg)
             if job_trace.qsize() == 0:
                 break
