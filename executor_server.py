@@ -55,6 +55,7 @@ class myTCP(StreamRequestHandler):
                 return
         elif s[0] == "gpu":
             self.wfile.write(str(len(nvgpu.available_gpus())).encode('utf-8'))
+            print(str(len(nvgpu.available_gpus())) + " is available!")
             return
         else:
             print("error message!")
