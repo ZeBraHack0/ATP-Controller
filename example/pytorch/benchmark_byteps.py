@@ -118,8 +118,8 @@ enable_profiling = args.profiler & (bps.rank() == 0)
 
 with torch.autograd.profiler.profile(enable_profiling, True) as prof:
     for x in range(args.num_iters):
-        time = timeit.timeit(benchmark_step, number=args.num_batches_per_iter)
-        img_sec = args.batch_size * args.num_batches_per_iter / time
+        iter_time = timeit.timeit(benchmark_step, number=args.num_batches_per_iter)
+        img_sec = args.batch_size * args.num_batches_per_iter / iter_time
         log('Iter #%d: %.1f img/sec per %s' % (x, img_sec, device))
         img_secs.append(img_sec)
 
