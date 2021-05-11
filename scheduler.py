@@ -21,6 +21,7 @@ DBL_MIN = float('-Infinity')
 global fn
 PTA = 10
 
+
 port_of_worker = [56, 48, 40, 32, 24, 16, 8, 0, 4]
 loop_back = [12, 28, 20, 44, 36, 60, 52]
 MAC_address_of_worker = [ "b8:59:9f:1d:04:f2"
@@ -1070,9 +1071,9 @@ class Scheduler:
         # job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        # job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = link_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         print(job.dis)
         print(job.ps)
         for m in job.dis:
@@ -1192,6 +1193,7 @@ class Scheduler:
         return self.idx
 
 
+
 sch = Scheduler()
 
 
@@ -1209,15 +1211,18 @@ class myTCP(StreamRequestHandler):
                     return
                 idx = sch.receive_job(job)
                 mutex_sch.release()
+                begin_time = 0
                 while True:
-                    time.sleep(5)
+                    time.sleep(1)
                     if mutex_sch.acquire():
-                        flag = 0
-                        if len(job.dis) > 0 and job.ps != -1:
-                            flag = 1
-                        # print("finished gpus: " + str(cfq.get(idx, -1)))
-                        # print("job cost: " + str(job.cost))
+                        if job not in sch.q1:
+                            # the job has been placed:
+                            begin_time = time.time()
                         if cfq.get(idx, -1) >= job.cost - 1:  # check cfq
+                            end_time = time.time()
+                            f = open("controller/DE.txt", "a")
+                            f.write(str(end_time-begin_time)+"\n")
+                            f.close()
                             print("finished job "+str(idx)+"!")
                             print(job.dis)
                             self.wfile.write("finished!".encode('utf-8'))
