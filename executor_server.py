@@ -6,6 +6,11 @@ import socket
 import nvgpu
 
 sudoPassword = 'zbh'
+agtr = 20000
+win = 250
+# "P4ML_MAX_AGTR_PER_THREAD="
+# "P4ML_HASH_RANGE"
+
 
 print(str(len(nvgpu.available_gpus())) + " is available!")
 class myTCP(StreamRequestHandler):
@@ -17,6 +22,8 @@ class myTCP(StreamRequestHandler):
         cmd = ""
         if s[0] == "execute":
             if s[1] == "worker":
+                cmd += "P4ML_MAX_AGTR_PER_THREAD=" + str(win) + " "
+                cmd += "P4ML_HASH_RANGE=" + str(agtr) + " "
                 workerID = s[2]
                 cmd += "DMLC_WORKER_ID=" + workerID + " "
                 workerSum = s[3]
@@ -41,7 +48,7 @@ class myTCP(StreamRequestHandler):
                 print("finished!")
                 return
             if s[1] == "ps":
-                cmd = "sudo ~/ATP-Controller/server/app " + s[2]
+                cmd = "sudo ~/ATP-Controller/server/app " + s[2] + " " + str(agtr) + " " + str(win)
                 print(cmd)
                 os.system('echo %s|sudo -S %s' % (sudoPassword, cmd))
                 # data2 = self.request.recv(1024)

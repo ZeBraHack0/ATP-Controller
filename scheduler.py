@@ -12,6 +12,7 @@ starving = 3600
 port = 8888
 ban_list = []
 cfq = {}
+cft = {}
 mutex_sch = threading.Lock()
 mutex_cfq = threading.Lock()
 link_capacity = 60  # Gbps
@@ -1071,9 +1072,9 @@ class Scheduler:
         # job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = link_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        # job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         print(job.dis)
         print(job.ps)
         for m in job.dis:
@@ -1166,6 +1167,8 @@ class Scheduler:
             conf.write(str(self.port_of_worker[self.vtop[job.ps]]) + '\n')
         conf.close()
 
+        cft[tmp_id] = time.time()
+
     def schedule(self):
         if self.job_num > 999:
             print("overload")
@@ -1213,15 +1216,12 @@ class myTCP(StreamRequestHandler):
                 mutex_sch.release()
                 begin_time = 0
                 while True:
-                    time.sleep(1)
+                    time.sleep(5)
                     if mutex_sch.acquire():
-                        if job not in sch.q1:
-                            # the job has been placed:
-                            begin_time = time.time()
                         if cfq.get(idx, -1) >= job.cost - 1:  # check cfq
                             end_time = time.time()
                             f = open("controller/DE.txt", "a")
-                            f.write(str(end_time-begin_time)+"\n")
+                            f.write(str(end_time-cft[idx])+"\n")
                             f.close()
                             print("finished job "+str(idx)+"!")
                             print(job.dis)

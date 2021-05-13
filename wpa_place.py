@@ -617,6 +617,8 @@ def packing(server, link, gpus, job_trace, job_ps):
     link[ls[0][0]] += 1
     job_trace.put(job)
 
+
+monitor = []
 gce = []
 for fn in [packing, Optimus, Tetris, gpu_balance, link_balance, least_fragment]:
     job_trace = queue.Queue()
@@ -657,6 +659,11 @@ for fn in [packing, Optimus, Tetris, gpu_balance, link_balance, least_fragment]:
         if job_trace.qsize() > 0:
             # avg, bandwidth = linear_evaluation(server, link, job_trace, job_ps)
             avg, bandwidth, sbw = bw_evaluation(server, [], job_trace, job_ps)
+            if fn.__name__ == "packing":
+                if link[2]:
+                    monitor.append(1-sbw[2])
+                else:
+                    monitor.append(0)
             band_sum.append(np.sum(bandwidth))
             # print(link)
             # print(bandwidth)
@@ -676,7 +683,7 @@ for fn in [packing, Optimus, Tetris, gpu_balance, link_balance, least_fragment]:
     # if READ_INF:
     #     print(band_sum)
     gce.append(np.average(np.array(ce)))
-    plt.plot(progress, label=fn.__name__)
+    # plt.plot(progress, label=fn.__name__)
     # print(server)
     # print(link)
     print(term)
@@ -697,5 +704,7 @@ for fn in [packing, Optimus, Tetris, gpu_balance, link_balance, least_fragment]:
 
 # plt.bar([x.__name__ for x in [packing, gpu_balance, link_balance, least_fragment, Optimus, Tetris]], gce, color=['r','g','b', 'c', 'm', 'y'])
 # plt.xticks(rotation=45)
+monitor = [0] + monitor + [0]
+plt.plot(monitor)
 plt.legend()
 plt.show()
