@@ -485,12 +485,13 @@ int main(int argc, char *argv[]) {
     // num_thread = atoi(argv[1]);
 
     appID = atoi(argv[1]);
+    max_agtr_size_per_thread = 250;
     if (argv[2])
     {
-      UsedSwitchAGTRcount = atoi(argv[1]); 
+      UsedSwitchAGTRcount = atoi(argv[2]); 
     }
     if (argv[3]) {
-      max_agtr_size_per_thread = atoi(argv[1]);
+      max_agtr_size_per_thread = atoi(argv[3]);
     }
     // Lam: this one is for experiment, disable temporary
     // if (argv[1])
@@ -515,7 +516,6 @@ int main(int argc, char *argv[]) {
     std::thread server_t(end_server, appID);
     server_t.detach();
     workQueue = new ThreadPool(num_thread, [](){});
-    max_agtr_size_per_thread = 250;
     global_dma_contexts = new DMAcontext*[num_thread];
     printf("\nUsedSwitchAGTRcount: %d\n\n", UsedSwitchAGTRcount);
     printf("max_agtr_size_per_thread: %d\n\n", max_agtr_size_per_thread);
