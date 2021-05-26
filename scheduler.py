@@ -935,7 +935,7 @@ def send_executor(role, des, idx, workerID, workerSum, tar_job, pid):
             except Exception as e:
                 print(e)
 
-        print("send worker request")
+        print(appID, "send worker request")
         client.send(message.encode('utf-8'))
         data = client.recv(1024)
         if data.decode('utf-8') == "finished!":
@@ -960,7 +960,7 @@ def send_executor(role, des, idx, workerID, workerSum, tar_job, pid):
             except Exception as e:
                 print(e)
 
-        print("send ps request")
+        print(appID, "send ps request")
         client.send(message.encode('utf-8'))
         client.close()
         while True:
@@ -1269,6 +1269,7 @@ def run_schedulor():
     while True:
         time.sleep(1)
         if mutex_sch.acquire():
+            print(cfq)
             sch.schedule()
             # print("rest resources:"+str(sch.rc))
             mutex_sch.release()

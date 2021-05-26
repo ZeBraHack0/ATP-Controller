@@ -52,7 +52,7 @@ p4_pd.register_reset_all_register31()
 
 # first Zero for pending
 port_of_worker = [56, 48, 40, 32, 24, 16, 8, 0, 4]
-single_loopback_port = 20
+single_loopback_port = 28
 
 MAC_address_of_worker = [ "b8:59:9f:1d:04:f2"
                         , "b8:59:9f:0b:30:72"
@@ -66,9 +66,9 @@ MAC_address_of_worker = [ "b8:59:9f:1d:04:f2"
 
 # first Zero for pending
 # PSs = [0, 9, 8]
-ps = 8
-workers_in_used = [32, 24, 16, 8]
-appId = 2
+ps = 24
+workers_in_used = [32, 24]
+appId = 1
 
 
 # Normal Switch traffic
