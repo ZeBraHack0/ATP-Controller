@@ -971,8 +971,11 @@ def send_executor(role, des, idx, workerID, workerSum, tar_job, pid):
                 message = "execute_finished"
                 client.send(message.encode('utf-8'))
                 client.close()
-                cfq[idx] += 1
-                print("execute_finished")
+                if mutex_cfq.acquire():
+                    cfq[idx] += 1
+                    mutex_cfq.release()
+                print(idx, "execute_finished")
+                print(cfq)
                 # client.send(message.encode('utf-8'))
                 # data = client.recv(1024)
                 # if data.decode('utf-8') == "finished!":
@@ -1218,7 +1221,7 @@ class myTCP(StreamRequestHandler):
                 while True:
                     time.sleep(5)
                     if mutex_sch.acquire():
-                        if cfq.get(idx, -1) >= job.cost - 1:  # check cfq
+                        if (len(job.dis) > 1 and cfq.get(idx, -1) >= job.cost) or (len(job.dis) == 1 and cfq.get(idx, -1) >= job.cost-1):  # check cfq
                             end_time = time.time()
                             f = open("controller/DE.txt", "a")
                             f.write(str(end_time-cft[idx])+"\n")
@@ -1269,7 +1272,6 @@ def run_schedulor():
     while True:
         time.sleep(1)
         if mutex_sch.acquire():
-            print(cfq)
             sch.schedule()
             # print("rest resources:"+str(sch.rc))
             mutex_sch.release()

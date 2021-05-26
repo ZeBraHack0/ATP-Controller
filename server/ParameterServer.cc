@@ -486,6 +486,7 @@ int main(int argc, char *argv[]) {
 
     appID = atoi(argv[1]);
     max_agtr_size_per_thread = 250;
+    num_thread = 12;
     if (argv[2])
     {
       UsedSwitchAGTRcount = atoi(argv[2]); 
@@ -493,12 +494,15 @@ int main(int argc, char *argv[]) {
     if (argv[3]) {
       max_agtr_size_per_thread = atoi(argv[3]);
     }
+    if (argv[4]) {
+      num_thread = atoi(argv[4]);
+    }
     // Lam: this one is for experiment, disable temporary
     // if (argv[1])
     //     UsedSwitchAGTRcount = atoi(argv[1]);
     // else
     //     UsedSwitchAGTRcount = MAX_AGTR_COUNT;
-    num_thread = 12;
+    
 
     dev_list = ibv_get_device_list(NULL);
     if (!dev_list) {
