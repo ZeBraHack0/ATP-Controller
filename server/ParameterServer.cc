@@ -61,7 +61,7 @@ void main_receive_packet_loop(DMAcontext* dma_context, int thread_id) {
 
         cqe_snapshot_t cur_snapshot;
         msgs_completed = 0;
-        
+        bool flag = 0;
         std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
         while(1) {
 
@@ -76,6 +76,19 @@ void main_receive_packet_loop(DMAcontext* dma_context, int thread_id) {
             msgs_completed = receive_packet(dma_context, &cur_snapshot);
             if (msgs_completed) {    
                 break;
+            }
+            if (flag == 0 && time_span.count() > 20.0 && msgs_completed == 0 &&
+                dma_context->total_received > 0) {
+              flag = 1;
+              fprintf(stderr,
+                      "Thread timeout:%d, total_received=%d, "
+                      "total_sent=%d, last_ACK=%d, "
+                      "total_last_tensor_packet_recv=%d\n",
+                      thread_id + (appID - 1) * MAX_THREAD_PER_APP,
+                      global_dma_contexts[thread_id]->total_received,
+                      global_dma_contexts[thread_id]->total_sent,
+                      tensors[tensors_pos_of_app[1]].window_manager[0].last_ACK,
+                      total_last_tensor_packet);
             }
             if (end_flag == 1) {
                 std::lock_guard<std::mutex> lock(_dma_mutex);

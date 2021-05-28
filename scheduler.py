@@ -1121,6 +1121,7 @@ class Scheduler:
             job.loopback = single_loop_back
             config(job.id, worker, self.port_of_worker[self.vtop[job.ps]], self.single_loopback_port[single_loop_back])
             print([job.id, worker, self.port_of_worker[self.vtop[job.ps]], self.single_loopback_port[single_loop_back]])
+            print("occupy mc_node: "+str(avail))
             if self.job_id[avail] == 0:
                 mcg_all = mc.mgrp_create(1000 - avail)
                 node_all = mc.node_create(
