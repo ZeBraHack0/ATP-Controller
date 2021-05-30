@@ -1277,6 +1277,14 @@ def run_schedulor():
             # print("rest resources:"+str(sch.rc))
             mutex_sch.release()
 
+            
+def hex_to_i32(h):
+    x = int(h, 0)
+    if (x > 0xFFFFFFFF):
+        raise UIn_Error("Integer cannot fit within 32 bits")
+    if (x > 0x7FFFFFFF): x-= 0x100000000
+    return x
+
 
 if __name__ == '__main__':
     ip = "10.0.0.10"

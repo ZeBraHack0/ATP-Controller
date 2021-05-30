@@ -30,7 +30,7 @@
 
 #define MAX_TENSOR_SIZE 1024000
 // Lam: this one is useless since a PS can only handle 1app, to be mod.
-#define MAX_APP_PER_THREAD 5
+#define MAX_APP_PER_THREAD 30
 #define MAX_STORAGE_PER_APP_PER_THREAD 10
 #define MAX_WORKER 16
 
