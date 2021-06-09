@@ -76,7 +76,7 @@ bps.broadcast_optimizer_state(optimizer, root_rank=0)
 pushpull_batch_size = args.batch_size * 1
 kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
 train_dataset = \
-    datasets.ImageFolder(args.train_dir,
+    datasets.ImageFolder("/data/imagenet18/data/imagenet-sz/352/train/",
                          transform=transforms.Compose([
                              transforms.RandomResizedCrop(224),
                              transforms.RandomHorizontalFlip(),
