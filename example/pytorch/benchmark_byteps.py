@@ -5,7 +5,7 @@ import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data.distributed
-from torchvision import models
+from torchvision import datasets, transforms, models
 import byteps.torch as bps
 import timeit
 import numpy as np
@@ -73,15 +73,36 @@ optimizer = bps.DistributedOptimizer(optimizer,
 bps.broadcast_parameters(model.state_dict(), root_rank=0)
 bps.broadcast_optimizer_state(optimizer, root_rank=0)
 
+pushpull_batch_size = args.batch_size * 1
+kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
+train_dataset = \
+    datasets.ImageFolder(args.train_dir,
+                         transform=transforms.Compose([
+                             transforms.RandomResizedCrop(224),
+                             transforms.RandomHorizontalFlip(),
+                             transforms.ToTensor(),
+                             transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                  std=[0.229, 0.224, 0.225])
+                         ]))
+# BytePS: use DistributedSampler to partition data among workers. Manually specify
+# `num_replicas=bps.size()` and `rank=bps.rank()`.
+train_sampler = torch.utils.data.distributed.DistributedSampler(
+    train_dataset, num_replicas=bps.size(), rank=bps.rank())
+train_loader = torch.utils.data.DataLoader(
+    train_dataset, batch_size=pushpull_batch_size,
+    sampler=train_sampler, **kwargs)
+
+
 # Set up fake data
 datasets = []
-for _ in range(100):
-    data = torch.rand(args.batch_size, 3, 224, 224)
-    target = torch.LongTensor(args.batch_size).random_() % 1000
+for batch_idx, (data, target) in enumerate(train_loader):
     if args.cuda:
         data, target = data.cuda(), target.cuda()
     datasets.append(data)
+    if batch_idx >= 100:
+        break
 data_index = 0
+
 
 def benchmark_step():
     global data_index

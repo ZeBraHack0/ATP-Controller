@@ -8,7 +8,7 @@ import nvgpu
 sudoPassword = 'zbh'
 agtr = 20000
 win = 250
-threadNum = 6
+threadNum = 12
 # "P4ML_MAX_AGTR_PER_THREAD="
 # "P4ML_HASH_RANGE"
 
