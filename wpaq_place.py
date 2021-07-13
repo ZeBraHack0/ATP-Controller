@@ -17,12 +17,13 @@ PTA = 10
 WAITING = 0
 
 # real
-trace = [8, 8, 4, 16, 8, 16, 8, 4, 4, 4, 4, 16, 4, 4, 8, 8, 4, 4, 2, 2, 4, 8, 8, 4, 16, 8, 16, 32, 4, 8, 4, 2, 4, 8, 4, 4, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 2, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 4, 4, 24, 4, 16, 2, 8, 16, 4, 8, 4, 4, 16, 8, 8, 8, 4, 8, 8, 4, 4, 8, 8, 4, 8, 4, 4, 4, 4, 8, 4, 8]
+# trace = [8, 8, 4, 16, 8, 16, 8, 4, 4, 4, 4, 16, 4, 4, 8, 8, 4, 4, 2, 2, 4, 8, 8, 4, 16, 8, 16, 32, 4, 8, 4, 2, 4, 8, 4, 4, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 2, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 4, 4, 24, 4, 16, 2, 8, 16, 4, 8, 4, 4, 16, 8, 8, 8, 4, 8, 8, 4, 4, 8, 8, 4, 8, 4, 4, 4, 4, 8, 4, 8]
 # trace = [5, 4, 2, 5, 4, 5, 5, 2, 3, 3, 2, 6, 3, 3, 3, 4, 3, 2, 1, 1, 3, 5, 5, 2, 6, 3, 7, 6, 2, 3, 2, 1, 3, 4, 3, 2, 5, 5, 4, 5, 4, 2, 4, 5, 3, 3, 1, 3, 4, 3, 3, 4, 3, 5, 3, 5, 3, 3, 4, 3, 5, 5, 3, 5, 2, 5, 4, 3, 3, 2, 5, 2, 5, 1, 3, 5, 3, 5, 3, 3, 7, 5, 3, 5, 2, 5, 3, 2, 2, 3, 5, 2, 4, 3, 3, 3, 2, 3, 2, 3]
 # trace = [3, 3, 2, 4, 3, 6, 3, 2, 2, 3, 2, 4, 2, 2, 3, 4, 2, 2, 1, 1, 3, 3, 5, 3, 6, 5, 5, 7, 3, 3, 3, 1, 3, 5, 3, 2, 5, 5, 5, 5, 5, 3, 5, 3, 5, 4, 1, 5, 3, 5, 4, 3, 3, 3, 3, 3, 4, 5, 4, 5, 5, 4, 4, 3, 3, 4, 3, 3, 2, 3, 4, 2, 6, 1, 5, 6, 3, 5, 3, 3, 4, 4, 4, 5, 3, 5, 5, 3, 3, 3, 3, 3, 3, 2, 2, 3, 3, 4, 3, 5]
 # for i in range(len(trace)):
 #     base = int(math.log(trace[i], 2))
 #     trace[i] = random.randint(base, base*2-1)
+# trace = trace[:20]
 
 # norm
 # trace = [3, 7, 5, 3, 5, 4, 6, 1, 5, 4, 4, 8, 2, 7, 4, 3, 9, 2, 2, 7, 6, 3, 5, 2, 6, 6, 4, 7, 3, 5, 4, 7, 8, 8, 5, 5, 5, 5, 4, 6, 8, 4, 5, 9, 3, 8, 6, 5, 4, 5]
@@ -32,7 +33,8 @@ trace = [8, 8, 4, 16, 8, 16, 8, 4, 4, 4, 4, 16, 4, 4, 8, 8, 4, 4, 2, 2, 4, 8, 8,
 # poisson
 # trace = [6, 4, 6, 2, 4, 5, 9, 2, 4, 4, 3, 7, 4, 5, 2, 5, 4, 1, 3, 0, 4, 7, 3, 2, 1, 3, 4, 4, 3, 2, 3, 2, 4, 4, 0, 5, 7, 3, 0, 6, 5, 1, 4, 1, 4, 5, 4, 5, 3, 2, 2, 8, 4, 3, 3, 4, 5, 4, 4, 4, 6, 7, 7, 5, 4, 9, 2, 4, 1, 4, 2, 4, 4, 4, 3, 4, 6, 2, 4, 9, 1, 3, 2, 3, 0, 2, 6, 1, 0, 3, 4, 5, 6, 6, 0, 6, 4, 4, 6, 8]
 # trace = [7, 3, 4, 1, 3, 4, 6, 2, 6, 2, 6, 1, 5, 5, 1, 3, 2, 2, 2, 5, 4, 5, 3, 3, 6, 7, 1, 4, 2, 10, 6, 3, 6, 5, 1, 5, 8, 1, 2, 3, 4, 4, 4, 8, 6, 4, 9, 1, 5, 1, 3, 4, 4, 0, 2, 3, 3, 1, 1, 4, 3, 5, 7, 4, 6, 6, 5, 6, 6, 5, 1, 5, 3, 4, 0, 1, 4, 2, 6, 1, 8, 5, 8, 5, 3, 5, 4, 5, 2, 2, 6, 3, 4, 6, 3, 3, 2, 3, 8, 2]
-trace = np.random.poisson(PER_GPU, 20)
+# trace = np.random.poisson(PER_GPU, 20)
+trace = [3, 1, 3, 2, 4, 3, 1, 2, 2, 2, 1, 1, 3, 3, 1, 2, 1, 2, 1, 6]
 
 period = np.array([16.966666666666665, 3221.05, 3318.3333333333335, 3112.4333333333334, 14.266666666666667, 5726.25, 1698.5333333333333, 1694.3166666666666, 1689.5333333333333, 15144.35, 3759.2333333333336, 172.46666666666667, 5672.7, 1639.5333333333333, 2996.1833333333334, 1622.1166666666668, 1622.3, 669.7666666666667, 10024.716666666667, 1592.1333333333332, 5096.55, 5594.383333333333, 1534.8666666666666, 1527.9666666666667, 12722.566666666666, 26094.916666666668, 1513.1666666666667, 11185.216666666667, 3394.35, 1488.2333333333333, 161.06666666666666, 401.43333333333334, 15780.566666666666, 2956.2, 3115.733333333333, 1936.7666666666667, 1407.9666666666667, 5431.583333333333, 5416.116666666667, 5414.383333333333, 1387.6833333333334, 3145.4166666666665, 4894.15, 3398.9833333333336, 1330.3166666666666, 3113.733333333333, 1321.0666666666666, 3406.7666666666664, 1295.6833333333334, 5308.433333333333, 2929.1666666666665, 1264.6833333333334, 3197.0333333333333, 5643.116666666667, 9866.2, 3372.85, 2757.05, 2278.0166666666664, 4698.016666666666, 1151.3833333333334, 2798.8, 1142.65, 1653.2833333333333, 1094.0833333333333, 9703.716666666667, 3388.0833333333335, 45.03333333333333, 2433.5166666666664, 2054.0166666666664, 65.43333333333334, 962.5666666666667, 4466.266666666666, 45816.95, 32654.15, 33076.416666666664, 32653.933333333334, 32656.333333333332, 15705.3, 791.0833333333334, 789.0666666666667, 783.6833333333333, 782.4333333333333, 617.0166666666667, 14216.483333333334, 683.3833333333333, 2764.2333333333336, 2752.866666666667, 3183.2, 661.9333333333333, 1365.8833333333334, 3166.6666666666665, 655.0166666666667, 13519.233333333334, 2751.416666666667, 6299.95, 8833.616666666667, 6212.833333333333, 21.616666666666667, 3019.0333333333333, 6163.166666666667, 1624.0166666666667, 15.483333333333333, 15.366666666666667, 272.98333333333335, 254.36666666666667, 2885.266666666667, 1111.35, 1107.85, 13.85, 15.366666666666667, 49.333333333333336, 17.183333333333334, 16.05, 4369.716666666666, 17.6, 15.25, 1415.25, 736.2666666666667, 14.216666666666667, 3395.55, 223.45, 255.16666666666666, 255.28333333333333, 256.35, 249.93333333333334, 255.26666666666668, 160.68333333333334, 160.58333333333334, 205.7, 38.55, 118.55, 217.66666666666666, 22.333333333333332, 17853.35, 17.266666666666666, 2758.0666666666666, 987.4333333333333, 46.63333333333333, 979.1833333333333, 24.25, 12.05, 11.75, 10359.033333333333, 14.716666666666667, 4141.883333333333, 810.7166666666667, 5739.55, 3696.9166666666665, 2560.25, 20.233333333333334, 1400.0833333333333, 2819.0, 2497.15, 2478.15, 1469.85, 15427.183333333334, 99.95, 3056.866666666667, 2370.6666666666665, 3034.0333333333333, 327.43333333333334, 2336.35, 2841.083333333333, 1856.05, 2267.0666666666666, 835.4666666666667, 789.2666666666667, 2201.0333333333333, 775.4166666666666, 90.5, 709.3833333333333, 1322.6166666666666, 3361.383333333333, 1203.7333333333333, 48.916666666666664, 147.56666666666666, 1226.8666666666666, 50.0, 1200.7666666666667, 23602.216666666667, 2015.2333333333333, 207.33333333333334, 3506.616666666667, 1353.0333333333333, 1203.6833333333334, 1212.6333333333334, 625.85, 11.833333333333334, 16.6, 49.88333333333333, 2763.7666666666664, 3135.6, 2752.383333333333, 1744.0333333333333, 2304.366666666667, 893.5666666666667, 9329.983333333334, 1658.1, 2453.0, 1645.5666666666666])
 period = np.log(period).astype(int)
@@ -71,7 +73,7 @@ def update(server, link, job_trace, job_load, bandwidth, job_ps, ce):
                     link[p[0]] -= 1
             if ps != -1:
                 link[ps] -= 1
-            ce.append(load[3]/load[2])
+            ce.append([load[2], load[3]/load[2]])
         else:
             job_trace.put(job)
             job_load.put(load)
@@ -147,6 +149,7 @@ def bw_evaluation(server, tmp_job, job_trace, job_ps):
     job_link = [[] for x in range(m)]
     server_link = [[] for x in range(n)]
     job_bw = [[0.0, 0.0] for x in range(m)]
+    job_mark = [0 for x in range(m)]
     server_bw = [1.0 for x in range(n)]
     alloc = 0
     pta = PTA
@@ -167,98 +170,74 @@ def bw_evaluation(server, tmp_job, job_trace, job_ps):
         m += 1
         job_link.append([])
         job_bw.append([0.0, 0.0])
+        job_mark.append(0)
         for p in tmp_job:
             job_link[m-1].append(p[0])
             server_link[p[0]].append(m-1)
 
-    # stage 1
-    for i in range(n):
-        min_bw = 1.1
-        bottle = -1
-        for j in range(n):
-            if server_bw[j] > 0 and len(server_link[j]) > 0 and server_bw[j]/len(server_link[j]) < min_bw:
-                bottle = j
-                min_bw = server_bw[j]/len(server_link[j])
-        if bottle == -1:
-            break
-        bw = server_bw[bottle]/len(server_link[bottle])
-        if pta/(m-alloc) < bw:  # step into stage two
-            break
-        for j in server_link[bottle]:
-            jdx = j
-            if jdx < 0:
-                jdx = -1*(jdx + 1)
-            if job_bw[jdx][0] > 0:
-                continue
-            job_bw[jdx][0] = bw
-            alloc += 1
-            pta -= bw
-            for s in job_link[jdx]:
-                sdx = s
-                if sdx < 0:
-                    sdx = -1*(sdx + 1)
-                if sdx != bottle:
-                    if s < 0:
-                        server_link[sdx].remove(-1*jdx-1)
-                    else:
-                        server_link[sdx].remove(jdx)
-                server_bw[sdx] -= bw
-            server_link[bottle] = []
-        if alloc == m:
-            break
-
-    # stage 2
-    if alloc < m:
-        a = pta / (m - alloc)
-        for i in range(m):
-            if job_bw[i][0] == 0 and len(job_link[i]) > 1:
-                job_bw[i][0] = a
-                for s in job_link[i]:
-                    sdx = s
-                    if sdx < 0:
-                        sdx = -1 * (sdx + 1)
-                    server_bw[sdx] -= a
-
+    while m > 0:
+        # stage 1
+        serverBN = [0.0 for x in range(n)]
         for i in range(n):
             min_bw = 1.1
             bottle = -1
             for j in range(n):
+                if len(server_link[j]) == 0:
+                    continue
                 x = 0
                 for k in server_link[j]:
                     if k >= 0:
                         x += 1
                     else:
-                        kdx = -1*(k+1)
-                        x += len(job_link[kdx]) - 1
-                if server_bw[j] > 0 and x > 0 and server_bw[j]/x < min_bw:
+                        kdx = -1 * (k + 1)
+                        if pta > 0:
+                            x += 1
+                        else:
+                            x += len(job_link[kdx]) - 1
+                if server_bw[j] > 0 and x > 0 and server_bw[j] / x < min_bw:
                     bottle = j
-                    min_bw = server_bw[j]/x
+                    min_bw = server_bw[j] / x
+                serverBN[j] = server_bw[j] / x
+            if pta > 1e-3 and m-alloc and pta / (m-alloc) < min_bw:
+                min_bw = pta / (m-alloc)
             if bottle == -1:
                 break
             bw = min_bw
-            for j in server_link[bottle]:
+            for j in range(m):
                 jdx = j
-                if jdx < 0:
-                    jdx = -1*(jdx + 1)
-                if job_bw[jdx][1] > 0:
+                if job_mark[jdx] or len(job_link[jdx]) == 0:
                     continue
-                job_bw[jdx][1] = bw
-                alloc += 1
+
                 for s in job_link[jdx]:
                     sdx = s
                     if sdx < 0:
-                        sdx = -1*(sdx + 1)
-                    if s < 0:
-                        if sdx != bottle:
-                            server_link[sdx].remove(-1*jdx-1)
-                        server_bw[sdx] -= bw * (len(job_link[jdx])-1)
-                    else:
-                        if sdx != bottle:
+                        sdx = -1 * (sdx + 1)
+                    if serverBN[sdx] == bw:
+                        alloc += 1
+                        job_mark[jdx] = 1
+                        break
+                for s in job_link[jdx]:
+                    sdx = s
+                    if sdx < 0:
+                        sdx = -1 * (sdx + 1)
+                    if job_mark[jdx] == 1:
+                        if s < 0:
+                            server_link[sdx].remove(-1 * jdx - 1)
+                        else:
                             server_link[sdx].remove(jdx)
+                    if s < 0 and pta == 0:
+                        server_bw[sdx] -= bw * (len(job_link[jdx]) - 1)
+                    else:
                         server_bw[sdx] -= bw
-                server_link[bottle] = []
+                if pta == 0:  # add here
+                    job_bw[jdx][1] += bw
+                else:
+                    job_bw[jdx][0] += bw
+                    pta -= bw
             if alloc == m:
                 break
+        if alloc == m:
+            break
     bandwidth = [x[0]+x[1] for x in job_bw]
 
     num = 0
@@ -649,7 +628,9 @@ def packing(server, link, job_trace, job_ps, buffer):
         return True, gpus
 
 
+gct = []
 gce = []
+packing_term = 0
 for i in range(1):
     job_trace = queue.Queue()
     job_load = queue.Queue()
@@ -717,12 +698,19 @@ for i in range(1):
         term += 1
     # if READ_INF:
     #     print(band_sum)
-    gce.append(np.average(np.array(ce)))
+    jct = []
+    de = []
+    for x in ce:
+        jct.append(x[0])
+        de.append(x[1])
+    gct.append(np.average(np.array(jct)))
+    gce.append(np.average(np.array(de)))
     print(progress)
-    plt.plot(progress, label="packing")
+    # plt.plot(progress, label="packing")
     # print(server)
     # print(link)
-    print(term)
+    # print(term)
+    packing_term = term
     num = 0
     sums = 0
     avg = 0
@@ -737,6 +725,8 @@ for i in range(1):
     if READ_INF:
         print(avg)
     # print(job_trace)
+
+tmp_term = 1000
 for fn in [Optimus, Tetris, gpu_balance, link_balance, least_fragment]:
     job_trace = queue.Queue()
     job_load = queue.Queue()
@@ -793,11 +783,18 @@ for fn in [Optimus, Tetris, gpu_balance, link_balance, least_fragment]:
         term += 1
     # if READ_INF:
     #     print(band_sum)
-    gce.append(np.average(np.array(ce)))
-    plt.plot(progress, label=fn.__name__)
+    jct = []
+    de = []
+    for x in ce:
+        jct.append(x[0])
+        de.append(x[1])
+    gct.append(np.average(np.array(jct)))
+    gce.append(np.average(np.array(de)))
+    # plt.plot(progress, label=fn.__name__)
     # print(server)
     # print(link)
-    print(term)
+    # print(term)
+    tmp_term = min(tmp_term, term)
     num = 0
     sums = 0
     avg = 0
@@ -813,7 +810,13 @@ for fn in [Optimus, Tetris, gpu_balance, link_balance, least_fragment]:
         print(avg)
     # print(job_trace)
 
-# plt.bar([x.__name__ for x in [packing, gpu_balance, link_balance, least_fragment, Optimus, Tetris]], gce, color=['r','g','b', 'c', 'm', 'y'])
-# plt.xticks(rotation=45)
+plt.bar([x.__name__ for x in [packing, gpu_balance, link_balance, least_fragment, Optimus, Tetris]], gct, color=['r','g','b', 'c', 'm', 'y'])
+plt.xticks(rotation=45)
 plt.legend()
 plt.show()
+for x in gct:
+    print(x)
+a = gct[0]
+gct.remove(gct[0])
+b = np.min(np.array(gct))
+print((b-a)/a)

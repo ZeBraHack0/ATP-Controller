@@ -44,7 +44,6 @@ ip_of_worker = [ "10.0.0.1"
                 , "10.0.0.8"
                 , "10.0.0.9" ]
 
-
 def gpu_balance(server, link, gpus, job_trace, job_ps):
     n = len(server)
     ls = []
@@ -242,6 +241,7 @@ def bw_evaluation(server, tmp_job, job_trace, job_ps):
     job_link = [[] for x in range(m)]
     server_link = [[] for x in range(n)]
     job_bw = [[0.0, 0.0] for x in range(m)]
+    job_mark = [0 for x in range(m)]
     server_bw = [1.0 for x in range(n)]
     alloc = 0
     pta = PTA
@@ -262,98 +262,74 @@ def bw_evaluation(server, tmp_job, job_trace, job_ps):
         m += 1
         job_link.append([])
         job_bw.append([0.0, 0.0])
+        job_mark.append(0)
         for p in tmp_job:
             job_link[m-1].append(p[0])
             server_link[p[0]].append(m-1)
 
-    # stage 1
-    for i in range(n):
-        min_bw = 1.1
-        bottle = -1
-        for j in range(n):
-            if server_bw[j] > 0 and len(server_link[j]) > 0 and server_bw[j]/len(server_link[j]) < min_bw:
-                bottle = j
-                min_bw = server_bw[j]/len(server_link[j])
-        if bottle == -1:
-            break
-        bw = server_bw[bottle]/len(server_link[bottle])
-        if pta/(m-alloc) < bw:  # step into stage two
-            break
-        for j in server_link[bottle]:
-            jdx = j
-            if jdx < 0:
-                jdx = -1*(jdx + 1)
-            if job_bw[jdx][0] > 0:
-                continue
-            job_bw[jdx][0] = bw
-            alloc += 1
-            pta -= bw
-            for s in job_link[jdx]:
-                sdx = s
-                if sdx < 0:
-                    sdx = -1*(sdx + 1)
-                if sdx != bottle:
-                    if s < 0:
-                        server_link[sdx].remove(-1*jdx-1)
-                    else:
-                        server_link[sdx].remove(jdx)
-                server_bw[sdx] -= bw
-            server_link[bottle] = []
-        if alloc == m:
-            break
-
-    # stage 2
-    if alloc < m:
-        a = pta / (m - alloc)
-        for i in range(m):
-            if job_bw[i][0] == 0 and len(job_link[i]) > 1:
-                job_bw[i][0] = a
-                for s in job_link[i]:
-                    sdx = s
-                    if sdx < 0:
-                        sdx = -1 * (sdx + 1)
-                    server_bw[sdx] -= a
-
+    while m > 0:
+        # stage 1
+        serverBN = [0.0 for x in range(n)]
         for i in range(n):
             min_bw = 1.1
             bottle = -1
             for j in range(n):
+                if len(server_link[j]) == 0:
+                    continue
                 x = 0
                 for k in server_link[j]:
                     if k >= 0:
                         x += 1
                     else:
-                        kdx = -1*(k+1)
-                        x += len(job_link[kdx]) - 1
-                if server_bw[j] > 0 and x > 0 and server_bw[j]/x < min_bw:
+                        kdx = -1 * (k + 1)
+                        if pta > 0:
+                            x += 1
+                        else:
+                            x += len(job_link[kdx]) - 1
+                if server_bw[j] > 0 and x > 0 and server_bw[j] / x < min_bw:
                     bottle = j
-                    min_bw = server_bw[j]/x
+                    min_bw = server_bw[j] / x
+                serverBN[j] = server_bw[j] / x
+            if pta > 1e-3 and m-alloc and pta / (m-alloc) < min_bw:
+                min_bw = pta / (m-alloc)
             if bottle == -1:
                 break
             bw = min_bw
-            for j in server_link[bottle]:
+            for j in range(m):
                 jdx = j
-                if jdx < 0:
-                    jdx = -1*(jdx + 1)
-                if job_bw[jdx][1] > 0:
+                if job_mark[jdx] or len(job_link[jdx]) == 0:
                     continue
-                job_bw[jdx][1] = bw
-                alloc += 1
+
                 for s in job_link[jdx]:
                     sdx = s
                     if sdx < 0:
-                        sdx = -1*(sdx + 1)
-                    if s < 0:
-                        if sdx != bottle:
-                            server_link[sdx].remove(-1*jdx-1)
-                        server_bw[sdx] -= bw * (len(job_link[jdx])-1)
-                    else:
-                        if sdx != bottle:
+                        sdx = -1 * (sdx + 1)
+                    if serverBN[sdx] == bw:
+                        alloc += 1
+                        job_mark[jdx] = 1
+                        break
+                for s in job_link[jdx]:
+                    sdx = s
+                    if sdx < 0:
+                        sdx = -1 * (sdx + 1)
+                    if job_mark[jdx] == 1:
+                        if s < 0:
+                            server_link[sdx].remove(-1 * jdx - 1)
+                        else:
                             server_link[sdx].remove(jdx)
+                    if s < 0 and pta == 0:
+                        server_bw[sdx] -= bw * (len(job_link[jdx]) - 1)
+                    else:
                         server_bw[sdx] -= bw
-                server_link[bottle] = []
+                if pta == 0:  # add here
+                    job_bw[jdx][1] += bw
+                else:
+                    job_bw[jdx][0] += bw
+                    pta -= bw
             if alloc == m:
                 break
+        if alloc == m:
+            break
     bandwidth = [x[0]+x[1] for x in job_bw]
 
     num = 0
@@ -376,6 +352,7 @@ def bw_evaluation(server, tmp_job, job_trace, job_ps):
         avg = 0
     # print(avg)
     return avg, bandwidth, server_bw
+
 
 def packing(server, link, gpus, job_trace, job_ps):
     n = len(server)
@@ -1073,11 +1050,11 @@ class Scheduler:
         job.id = avail
 
         # job.dis, job.ps = packing(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        # job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        job.dis, job.ps = Optimus(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = Tetris(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = gpu_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         # job.dis, job.ps = link_balance(self.server, self.link, job.cost, self.job_trace, self.job_ps)
-        job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
+        # job.dis, job.ps = least_fragment(self.server, self.link, job.cost, self.job_trace, self.job_ps)
         print(job.dis)
         print(job.ps)
         for m in job.dis:
@@ -1275,7 +1252,13 @@ def run_schedulor():
         if mutex_sch.acquire():
             sch.schedule()
             # print("rest resources:"+str(sch.rc))
+            avg, bandwidth, sbw = bw_evaluation(sch.server, [], sch.job_trace, sch.job_ps)
+            # if len(sbw) > 2:
+            #     f = open("controller/BW.txt", "a")
+            #     f.write(str(1-sbw[2]) + "\n")
+            #     f.close()
             mutex_sch.release()
+
 
             
 def hex_to_i32(h):
