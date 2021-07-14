@@ -219,7 +219,7 @@ class Controller:
 
     def place(self, job):
         
-        # TODO: add place proxy
+        # TODO: add placement policy
         if (job.is_MDJ == 1):
             config(job_id=job_id, workers=workers_in_used, ps=ps, single_loopback_port=single_loopback_port)
     
